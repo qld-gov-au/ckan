@@ -131,7 +131,7 @@ six==1.11.0
     #   sqlalchemy-migrate
 sqlalchemy-migrate==0.10.0
     # via -r requirements.in
-sqlalchemy==1.1.18
+sqlalchemy==1.3.0
     # via
     #   -r requirements.in
     #   sqlalchemy-migrate

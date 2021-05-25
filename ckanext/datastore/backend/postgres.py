@@ -1448,7 +1448,7 @@ def upsert(context, data_dict):
                 'query': ['Query took too long']
             })
         raise
-    except Exception as e:
+    except Exception:
         trans.rollback()
         raise
     finally:
@@ -1511,7 +1511,7 @@ def search_sql(context, data_dict):
         context['check_access'](table_names)
 
         for f in function_names:
-            for name_variant in [f.lower(), '"{}"'.format(f)]:
+            for name_variant in [f, f.lower(), '"{}"'.format(f)]:
                 if name_variant in backend.allowed_sql_functions:
                     break
             else:
@@ -1844,7 +1844,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                     'query': ['Query took too long']
                 })
             raise
-        except Exception as e:
+        except Exception:
             trans.rollback()
             raise
         finally:

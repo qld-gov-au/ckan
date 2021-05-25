@@ -4,6 +4,7 @@ import json
 import nose
 import urllib
 import pprint
+import six
 
 import sqlalchemy.orm as orm
 
@@ -12,11 +13,9 @@ import ckan.lib.create_test_data as ctd
 import ckan.model as model
 import ckan.tests.legacy as tests
 
-from ckan.common import config
 import ckanext.datastore.backend.postgres as db
 from ckanext.datastore.tests.helpers import (
-    extract, rebuild_all_dbs,
-    DatastoreFunctionalTestBase, DatastoreLegacyTestBase)
+    extract, DatastoreFunctionalTestBase, DatastoreLegacyTestBase)
 
 import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
@@ -142,15 +141,14 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                        {'id': u'characters', u'type': u'_text'},
                        {'id': 'rating with %'}],
             'records': [{u'b\xfck': 'annakarenina', 'author': 'tolstoy',
-                        'published': '2005-03-01', 'nested': ['b', {'moo': 'moo'}],
-                        u'characters': [u'Princess Anna', u'Sergius'],
-                        'rating with %': '60%'},
+                         'published': '2005-03-01', 'nested': ['b', {'moo': 'moo'}],
+                         u'characters': [u'Princess Anna', u'Sergius'],
+                         'rating with %': '60%'},
                         {u'b\xfck': 'warandpeace', 'author': 'tolstoy',
-                        'nested': {'a': 'b'}, 'rating with %': '99%'}
-                       ]
+                         'nested': {'a': 'b'}, 'rating with %': '99%'}]
         }
         postparams = '%s=1' % json.dumps(cls.data)
-        auth = {'Authorization': str(cls.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(cls.sysadmin_user.apikey)}
         res = cls.app.post('/api/action/datastore_create', params=postparams,
                            extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -183,7 +181,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
     def test_search_basic(self):
         data = {'resource_id': self.data['resource_id']}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -195,7 +193,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         # search with parameter id should yield the same results
         data = {'id': self.data['resource_id']}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -228,7 +226,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
             'resource_id': resource['id'],
             'force': True
         })
-        auth = {'Authorization': str(self.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.sysadmin_user.apikey)}
         res = self.app.post('/api/action/datastore_create', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -236,7 +234,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
 
         data = {'resource_id': resource['id']}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=403)
         res_dict = json.loads(res.body)
@@ -245,7 +243,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
     def test_search_alias(self):
         data = {'resource_id': self.data['aliases']}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict_alias = json.loads(res.body)
@@ -257,7 +255,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'fields': [{'id': 'bad'}]}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -267,7 +265,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'fields': [u'b\xfck']}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -280,22 +278,23 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'fields': u'b\xfck, author'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
         assert res_dict['success'] is True
         result = res_dict['result']
         assert result['total'] == len(self.data['records'])
-        assert result['records'] == [{u'b\xfck': 'annakarenina', 'author': 'tolstoy'},
-                    {u'b\xfck': 'warandpeace', 'author': 'tolstoy'}], result['records']
+        assert result['records'] == [
+            {u'b\xfck': 'annakarenina', 'author': 'tolstoy'},
+            {u'b\xfck': 'warandpeace', 'author': 'tolstoy'}], result['records']
 
     def test_search_distinct(self):
         data = {'resource_id': self.data['resource_id'],
                 'fields': [u'author'],
                 'distinct': True}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -308,7 +307,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'filters': {u'b\xfck': 'annakarenina'}}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -321,7 +320,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'filters': {u'characters': [u'Princess Anna', u'Sergius']}}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -334,9 +333,9 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'filters': {
                     u'b\xfck': [u'annakarenina', u'warandpeace']
-                }}
+        }}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -349,7 +348,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'filters': {u'b\xfck': [u'annakarenina', u'warandpeace']}}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -361,7 +360,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
     def test_search_filters_get(self):
         filters = {u'b\xfck': 'annakarenina'}
         res = self.app.get('/api/action/datastore_search?resource_id={0}&filters={1}'.format(
-                    self.data['resource_id'], json.dumps(filters)))
+            self.data['resource_id'], json.dumps(filters)))
         res_dict = json.loads(res.body)
         assert res_dict['success'] is True
         result = res_dict['result']
@@ -373,7 +372,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 # invalid because author is not a numeric field
                 'filters': {u'author': 42}}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.sysadmin_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -383,7 +382,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'sort': u'b\xfck asc, author desc'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -409,7 +408,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'sort': u'f\xfc\xfc asc'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.sysadmin_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -422,7 +421,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'limit': 1}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -435,7 +434,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'limit': 'bad'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -444,7 +443,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'limit': -1}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -455,7 +454,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 'limit': 1,
                 'offset': 1}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -468,7 +467,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'offset': 'bad'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -477,7 +476,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'offset': -1}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -488,7 +487,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 'q': 'annakarenina'}
 
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -518,10 +517,10 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
         assert results == self.expected_records, result['records']
 
         expected_fields = [{u'type': u'int', u'id': u'_id'},
-                        {u'type': u'text', u'id': u'b\xfck'},
-                        {u'type': u'text', u'id': u'author'},
-                        {u'type': u'timestamp', u'id': u'published'},
-                        {u'type': u'json', u'id': u'nested'}]
+                           {u'type': u'text', u'id': u'b\xfck'},
+                           {u'type': u'text', u'id': u'author'},
+                           {u'type': u'timestamp', u'id': u'published'},
+                           {u'type': u'json', u'id': u'nested'}]
         for field in expected_fields:
             assert_in(field, result['fields'])
 
@@ -551,7 +550,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 }
 
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -566,7 +565,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 }
 
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -581,7 +580,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 }
 
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -593,7 +592,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
                 }
 
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -602,7 +601,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
     def test_search_table_metadata(self):
         data = {'resource_id': "_table_metadata"}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -614,7 +613,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
             'filters': 'the-filter'
         }
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -629,7 +628,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
             }
         }
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -644,7 +643,7 @@ class TestDatastoreSearch(DatastoreLegacyTestBase):
             ]
         }
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -665,27 +664,27 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
             resource_id=resource.id,
             force=True,
             fields=[
-              {'id': 'id'},
-              {'id': 'date', 'type':'date'},
-              {'id': 'x'},
-              {'id': 'y'},
-              {'id': 'z'},
-              {'id': 'country'},
-              {'id': 'title'},
-              {'id': 'lat'},
-              {'id': 'lon'}
+                {'id': 'id'},
+                {'id': 'date', 'type': 'date'},
+                {'id': 'x'},
+                {'id': 'y'},
+                {'id': 'z'},
+                {'id': 'country'},
+                {'id': 'title'},
+                {'id': 'lat'},
+                {'id': 'lon'}
             ],
             records=[
-              {'id': 0, 'date': '2011-01-01', 'x': 1, 'y': 2, 'z': 3, 'country': 'DE', 'title': 'first 99', 'lat':52.56, 'lon':13.40},
-              {'id': 1, 'date': '2011-02-02', 'x': 2, 'y': 4, 'z': 24, 'country': 'UK', 'title': 'second', 'lat':54.97, 'lon':-1.60},
-              {'id': 2, 'date': '2011-03-03', 'x': 3, 'y': 6, 'z': 9, 'country': 'US', 'title': 'third', 'lat':40.00, 'lon':-75.5},
-              {'id': 3, 'date': '2011-04-04', 'x': 4, 'y': 8, 'z': 6, 'country': 'UK', 'title': 'fourth', 'lat':57.27, 'lon':-6.20},
-              {'id': 4, 'date': '2011-05-04', 'x': 5, 'y': 10, 'z': 15, 'country': 'UK', 'title': 'fifth', 'lat':51.58, 'lon':0},
-              {'id': 5, 'date': '2011-06-02', 'x': 6, 'y': 12, 'z': 18, 'country': 'DE', 'title': 'sixth 53.56', 'lat':51.04, 'lon':7.9}
+                {'id': 0, 'date': '2011-01-01', 'x': 1, 'y': 2, 'z': 3, 'country': 'DE', 'title': 'first 99', 'lat': 52.56, 'lon': 13.40},
+                {'id': 1, 'date': '2011-02-02', 'x': 2, 'y': 4, 'z': 24, 'country': 'UK', 'title': 'second', 'lat': 54.97, 'lon': -1.60},
+                {'id': 2, 'date': '2011-03-03', 'x': 3, 'y': 6, 'z': 9, 'country': 'US', 'title': 'third', 'lat': 40.00, 'lon': -75.5},
+                {'id': 3, 'date': '2011-04-04', 'x': 4, 'y': 8, 'z': 6, 'country': 'UK', 'title': 'fourth', 'lat': 57.27, 'lon': -6.20},
+                {'id': 4, 'date': '2011-05-04', 'x': 5, 'y': 10, 'z': 15, 'country': 'UK', 'title': 'fifth', 'lat': 51.58, 'lon': 0},
+                {'id': 5, 'date': '2011-06-02', 'x': 6, 'y': 12, 'z': 18, 'country': 'DE', 'title': 'sixth 53.56', 'lat': 51.04, 'lon': 7.9}
             ]
         )
         postparams = '%s=1' % json.dumps(cls.data)
-        auth = {'Authorization': str(cls.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(cls.normal_user.apikey)}
         res = cls.app.post('/api/action/datastore_create', params=postparams,
                            extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -695,7 +694,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': 'DE'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -706,7 +705,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
                 'plain': 'False',
                 'q': 'DE | UK'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -716,7 +715,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': '99'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -726,7 +725,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': '4'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -736,7 +735,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': '53.56'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -746,7 +745,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': '52.56'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -756,7 +755,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': '2011-01-01'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -766,7 +765,7 @@ class TestDatastoreFullTextSearch(DatastoreLegacyTestBase):
         data = {'resource_id': self.data['resource_id'],
                 'q': '"{}"'}
         postparams = '%s=1' % json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -794,15 +793,15 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
                        {'id': 'author', 'type': 'text'},
                        {'id': 'published'}],
             'records': [{u'b\xfck': 'annakarenina',
-                        'author': 'tolstoy',
-                        'published': '2005-03-01',
-                        'nested': ['b', {'moo': 'moo'}]},
+                         'author': 'tolstoy',
+                         'published': '2005-03-01',
+                         'nested': ['b', {'moo': 'moo'}]},
                         {u'b\xfck': 'warandpeace',
-                        'author': 'tolstoy',
-                        'nested': {'a': 'b'}}]
+                         'author': 'tolstoy',
+                         'nested': {'a': 'b'}}]
         }
         postparams = '%s=1' % json.dumps(cls.data)
-        auth = {'Authorization': str(cls.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(cls.sysadmin_user.apikey)}
         res = cls.app.post('/api/action/datastore_create', params=postparams,
                            extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -870,13 +869,13 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
             resource["id"]
         )
         assert_raises(p.toolkit.NotAuthorized,
-            helpers.call_action, "datastore_search_sql", sql=sql)
+                      helpers.call_action, "datastore_search_sql", sql=sql)
 
     def test_invalid_statement(self):
         query = 'SELECT ** FROM foobar'
         data = {'sql': query}
         postparams = json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search_sql', params=postparams,
                             extra_environ=auth, status=409)
         res_dict = json.loads(res.body)
@@ -886,7 +885,7 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
         query = 'SELECT * FROM "{0}"'.format(self.data['resource_id'])
         data = {'sql': query}
         postparams = json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search_sql', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -917,7 +916,7 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
         query = 'SELECT * FROM public."{0}" WHERE "author" LIKE \'tol%\''.format(self.data['resource_id'])
         data = {'sql': query}
         postparams = json.dumps(data)
-        auth = {'Authorization': str(self.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.sysadmin_user.apikey)}
         res = self.app.post('/api/action/datastore_search_sql', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -943,7 +942,7 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
             limit 2
             '''.format(self.data['resource_id'])
         data = urllib.urlencode({'sql': query})
-        auth = {'Authorization': str(self.normal_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
         res = self.app.post('/api/action/datastore_search_sql', params=data,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -976,7 +975,7 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
             'resource_id': resource['id'],
             'force': True
         })
-        auth = {'Authorization': str(self.sysadmin_user.apikey)}
+        auth = {'Authorization': six.binary_type(self.sysadmin_user.apikey)}
         res = self.app.post('/api/action/datastore_create', params=postparams,
                             extra_environ=auth)
         res_dict = json.loads(res.body)
@@ -986,8 +985,9 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
         query = 'SELECT * FROM "{0}"'.format(resource['id'])
         data = {'sql': query}
         postparams = json.dumps(data)
-        auth = {'Authorization': str(self.normal_user.apikey)}
-        res = self.app.post('/api/action/datastore_search_sql', params=postparams,
+        auth = {'Authorization': six.binary_type(self.normal_user.apikey)}
+        res = self.app.post('/api/action/datastore_search_sql',
+                            params=postparams,
                             extra_environ=auth, status=403)
         res_dict = json.loads(res.body)
         assert res_dict['success'] is False
@@ -1231,7 +1231,7 @@ class TestDatastoreSearchRecordsFormat(DatastoreFunctionalTestBase):
             u'3,9,2020-01-01T00:00:00,aaac\n'
             u'2,9,2020-01-02T00:00:00,aaab\n'
             u'1,10,2020-01-01T00:00:00,aaab\n'
-            )
+        )
         assert_equals(
             helpers.call_action(
                 'datastore_search',
@@ -1241,7 +1241,7 @@ class TestDatastoreSearchRecordsFormat(DatastoreFunctionalTestBase):
             u'1,10,2020-01-01T00:00:00,aaab\n'
             u'3,9,2020-01-01T00:00:00,aaac\n'
             u'2,9,2020-01-02T00:00:00,aaab\n'
-            )
+        )
         assert_equals(
             helpers.call_action(
                 'datastore_search',
@@ -1251,4 +1251,4 @@ class TestDatastoreSearchRecordsFormat(DatastoreFunctionalTestBase):
             u'2,9,2020-01-02T00:00:00,aaab\n'
             u'1,10,2020-01-01T00:00:00,aaab\n'
             u'3,9,2020-01-01T00:00:00,aaac\n'
-            )
+        )

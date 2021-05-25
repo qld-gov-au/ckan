@@ -2,10 +2,10 @@
 # Copyright (C) 2020 ORGANIZATION
 # This file is distributed under the same license as the ckan project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2020.
-# 
+#
 # Translators:
 # Adrià Mercader <adria.mercader@okfn.org>, 2018
-# 
+#
 #, fuzzy
 msgid ""
 msgstr ""
@@ -4129,7 +4129,7 @@ msgstr "Change details"
 
 #: ckan/templates/user/edit_user_form.html:10
 msgid "Full name"
-msgstr "Full name"
+msgstr "Displayed name"
 
 #: ckan/templates/user/edit_user_form.html:10
 msgid "eg. Joe Bloggs"
@@ -4273,7 +4273,7 @@ msgstr "username"
 
 #: ckan/templates/user/new_user_form.html:6
 msgid "Full Name"
-msgstr "Full Name"
+msgstr "Displayed Name"
 
 #: ckan/templates/user/new_user_form.html:19
 msgid "Create Account"

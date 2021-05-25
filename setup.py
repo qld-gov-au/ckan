@@ -221,7 +221,7 @@ for group, filepath in _extras_groups:
     with open(os.path.join(HERE, filepath), 'r') as f:
         extras_require[group] = f.readlines()
 
-# this is used to fix an incompatiblity with readthedocs dependencies
+# this is used to fix an incompatibility with readthedocs dependencies
 extras_require['readthedocs'] = ["Jinja2>=2.3"]
 
 setup(

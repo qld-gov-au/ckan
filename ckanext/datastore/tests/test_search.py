@@ -1045,7 +1045,7 @@ class TestDatastoreSQL(DatastoreLegacyTestBase):
             resource["id"]
         )
         assert_raises(p.toolkit.NotAuthorized,
-            helpers.call_action, "datastore_search_sql", sql=sql)
+                      helpers.call_action, "datastore_search_sql", sql=sql)
 
 
 class TestDatastoreSQLFunctional(DatastoreFunctionalTestBase):

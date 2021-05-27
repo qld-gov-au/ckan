@@ -60,7 +60,7 @@ class TestRegisterUser(helpers.FunctionalTestBase):
         assert_true('The passwords you entered do not match' in response)
 
     def test_create_user_as_sysadmin(self):
-        admin_pass = 'RandomPassword123'
+        admin_pass = 'RandomPassword123!'
         sysadmin = factories.Sysadmin(password=admin_pass)
         app = self._get_test_app()
 
@@ -109,7 +109,7 @@ class TestLoginView(helpers.FunctionalTestBase):
 
         # fill it in
         login_form['login'] = user['name']
-        login_form['password'] = 'RandomPassword123'
+        login_form['password'] = 'RandomPassword123!'
 
         # submit it
         submit_response = login_form.submit()
@@ -327,7 +327,7 @@ class TestUserEdit(helpers.FunctionalTestBase):
         form['email'] = 'new@example.com'
 
         # factory returns user with password 'pass'
-        form.fields['old_password'][0].value = 'RandomPassword123'
+        form.fields['old_password'][0].value = 'RandomPassword123!'
 
         response = submit_and_follow(app, form, env, 'save')
         assert_true('Profile updated' in response)
@@ -481,8 +481,8 @@ class TestUserEdit(helpers.FunctionalTestBase):
 
         form = response.forms['user-edit-form']
 
-        # factory returns user with password 'RandomPassword123'
-        form.fields['old_password'][0].value = 'RandomPassword123'
+        # factory returns user with password 'RandomPassword123!'
+        form.fields['old_password'][0].value = 'RandomPassword123!'
         form.fields['password1'][0].value = 'NewPassword1'
         form.fields['password2'][0].value = 'NewPassword1'
 
@@ -499,7 +499,7 @@ class TestUserEdit(helpers.FunctionalTestBase):
 
         form = response.forms['user-edit-form']
 
-        # factory returns user with password 'RandomPassword123'
+        # factory returns user with password 'RandomPassword123!'
         form.fields['old_password'][0].value = 'Wrong-Pass1'
         form.fields['password1'][0].value = 'NewPassword1'
         form.fields['password2'][0].value = 'NewPassword1'

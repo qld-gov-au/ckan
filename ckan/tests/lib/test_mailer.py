@@ -1,11 +1,12 @@
 # encoding: utf-8
 
-from nose.tools import assert_equal, assert_raises, assert_in, assert_raises
+from nose.tools import assert_equal, assert_raises, assert_in
 from email.mime.text import MIMEText
 from email.parser import Parser
 from email.header import decode_header
 import hashlib
 import base64
+import logging
 
 from ckan.common import config
 import ckan.model as model
@@ -17,12 +18,50 @@ import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
 
 
+log = logging.getLogger(__name__)
+
+
+def _test_user():
+    results = model.Session.query(model.User).\
+        filter(model.User.name == 'test_user_00').all()
+    if results:
+        model_obj = results[0]
+        if model_obj.reset_key:
+            # clean up existing user
+            model_obj.reset_key = None
+            model.Session.commit()
+        return {'name': model_obj.name, 'email': model_obj.email}
+    else:
+        return factories.User()
+
+
+def _test_group():
+    results = model.Session.query(model.Group).\
+        filter(model.Group.name == 'test_group_00').all()
+    if results:
+        model_obj = results[0]
+        return {'title': model_obj.title, 'is_organization': False}
+    else:
+        return factories.Group()
+
+
+def _test_org():
+    results = model.Session.query(model.Group).\
+        filter(model.Group.name == 'test_org_00').all()
+    if results:
+        model_obj = results[0]
+        return {'title': model_obj.title, 'is_organization': True}
+    else:
+        return factories.Organization()
+
+
 class MailerBase(SmtpServerHarness):
 
     @classmethod
     def setup_class(cls):
 
         helpers.reset_db()
+        config.pop('ckan.hide_version', None)
 
         smtp_server = config.get('smtp.test_server')
         if smtp_server:
@@ -62,7 +101,7 @@ class MailerBase(SmtpServerHarness):
 class TestMailer(MailerBase):
 
     def test_mail_recipient(self):
-        user = factories.User()
+        user = _test_user()
 
         msgs = self.get_smtp_messages()
         assert_equal(msgs, [])
@@ -84,13 +123,46 @@ class TestMailer(MailerBase):
         assert test_email['headers'].keys()[0] in msg[3], msg[3]
         assert test_email['headers'].values()[0] in msg[3], msg[3]
         assert test_email['subject'] in msg[3], msg[3]
+        log.debug("Checking %s for X-Mailer header", msg)
+        assert 'X-Mailer' in msg[3], "Missing X-Mailer header"
+        expected_body = self.mime_encode(test_email['body'],
+                                         test_email['recipient_name'])
+        assert_in(expected_body, msg[3])
+
+    def test_mail_recipient_hiding_mailer(self):
+        user = _test_user()
+        config['ckan.hide_version'] = True
+
+        msgs = self.get_smtp_messages()
+        assert_equal(msgs, [])
+
+        # send email
+        test_email = {'recipient_name': 'Bob',
+                      'recipient_email': user['email'],
+                      'subject': 'Meeting',
+                      'body': 'The meeting is cancelled.',
+                      'headers': {'header1': 'value1'}}
+        mailer.mail_recipient(**test_email)
+
+        # check it went to the mock smtp server
+        msgs = self.get_smtp_messages()
+        assert_equal(len(msgs), 1)
+        msg = msgs[0]
+        assert_equal(msg[1], config['smtp.mail_from'])
+        assert_equal(msg[2], [test_email['recipient_email']])
+        assert test_email['headers'].keys()[0] in msg[3], msg[3]
+        assert test_email['headers'].values()[0] in msg[3], msg[3]
+        assert test_email['subject'] in msg[3], msg[3]
+        log.debug("Checking %s for X-Mailer header", msg)
+        assert 'X-Mailer' not in msg[3], \
+            "Should have skipped X-Mailer header"
         expected_body = self.mime_encode(test_email['body'],
                                          test_email['recipient_name'])
         assert_in(expected_body, msg[3])
 
     def test_mail_user(self):
 
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
         msgs = self.get_smtp_messages()
@@ -151,7 +223,7 @@ class TestMailer(MailerBase):
         assert_in(expected_from_header, msg[3])
 
     def test_send_reset_email(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
         mailer.send_reset_link(user_obj)
@@ -170,7 +242,7 @@ class TestMailer(MailerBase):
         assert_in(expected_body, msg[3])
 
     def test_send_invite_email(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
         assert user_obj.reset_key is None, user_obj
 
@@ -191,10 +263,10 @@ class TestMailer(MailerBase):
         assert user_obj.reset_key is not None, user
 
     def test_send_invite_email_with_group(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
-        group = factories.Group()
+        group = _test_group()
         role = 'member'
 
         # send email
@@ -208,10 +280,10 @@ class TestMailer(MailerBase):
         assert_in(h.roles_translated()[role], body)
 
     def test_send_invite_email_with_org(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
-        org = factories.Organization()
+        org = _test_org()
         role = 'admin'
 
         # send email

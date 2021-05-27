@@ -5,7 +5,6 @@ import os
 import smtplib
 import socket
 import logging
-import uuid
 from time import time
 from email.mime.text import MIMEText
 from email.header import Header
@@ -49,7 +48,8 @@ def _mail_recipient(recipient_name, recipient_email,
     recipient = u"%s <%s>" % (recipient_name, recipient_email)
     msg['To'] = Header(recipient, 'utf-8')
     msg['Date'] = Utils.formatdate(time())
-    msg['X-Mailer'] = "CKAN %s" % ckan.__version__
+    if not paste.deploy.converters.asbool(config.get('ckan.hide_version')):
+        msg['X-Mailer'] = "CKAN %s" % ckan.__version__
 
     # Send the email using Python's smtplib.
     smtp_connection = smtplib.SMTP()

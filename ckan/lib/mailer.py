@@ -5,7 +5,6 @@ import os
 import smtplib
 import socket
 import logging
-import uuid
 from time import time
 from email.mime.text import MIMEText
 from email.header import Header

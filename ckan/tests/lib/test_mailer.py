@@ -1,6 +1,6 @@
 # encoding: utf-8
 
-from nose.tools import assert_equal, assert_raises, assert_in, assert_raises
+from nose.tools import assert_equal, assert_raises, assert_in
 from email.mime.text import MIMEText
 from email.parser import Parser
 from email.header import decode_header
@@ -130,7 +130,7 @@ class TestMailer(MailerBase):
         assert_in(expected_body, msg[3])
 
     def test_mail_recipient_hiding_mailer(self):
-        user = factories.User()
+        user = _test_user()
         config['ckan.hide_version'] = True
 
         msgs = self.get_smtp_messages()
@@ -162,7 +162,7 @@ class TestMailer(MailerBase):
 
     def test_mail_user(self):
 
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
         msgs = self.get_smtp_messages()
@@ -223,7 +223,7 @@ class TestMailer(MailerBase):
         assert_in(expected_from_header, msg[3])
 
     def test_send_reset_email(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
         mailer.send_reset_link(user_obj)
@@ -242,7 +242,7 @@ class TestMailer(MailerBase):
         assert_in(expected_body, msg[3])
 
     def test_send_invite_email(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
         assert user_obj.reset_key is None, user_obj
 
@@ -263,10 +263,10 @@ class TestMailer(MailerBase):
         assert user_obj.reset_key is not None, user
 
     def test_send_invite_email_with_group(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
-        group = factories.Group()
+        group = _test_group()
         role = 'member'
 
         # send email
@@ -280,10 +280,10 @@ class TestMailer(MailerBase):
         assert_in(h.roles_translated()[role], body)
 
     def test_send_invite_email_with_org(self):
-        user = factories.User()
+        user = _test_user()
         user_obj = model.User.by_name(user['name'])
 
-        org = factories.Organization()
+        org = _test_org()
         role = 'admin'
 
         # send email

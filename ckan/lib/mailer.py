@@ -49,7 +49,8 @@ def _mail_recipient(recipient_name, recipient_email,
     recipient = u"%s <%s>" % (recipient_name, recipient_email)
     msg['To'] = Header(recipient, 'utf-8')
     msg['Date'] = Utils.formatdate(time())
-    msg['X-Mailer'] = "CKAN %s" % ckan.__version__
+    if not config.get('ckan.hide_version'):
+        msg['X-Mailer'] = "CKAN %s" % ckan.__version__
 
     # Send the email using Python's smtplib.
     smtp_connection = smtplib.SMTP()

@@ -84,6 +84,37 @@ class TestMailer(MailerBase):
         assert test_email['headers'].keys()[0] in msg[3], msg[3]
         assert test_email['headers'].values()[0] in msg[3], msg[3]
         assert test_email['subject'] in msg[3], msg[3]
+        assert 'X-Mailer' in test_email['headers'], "Missing X-Mailer header"
+        expected_body = self.mime_encode(test_email['body'],
+                                         test_email['recipient_name'])
+        assert_in(expected_body, msg[3])
+
+    def test_mail_recipient_hiding_mailer(self):
+        user = factories.User()
+        config['ckan.hide_version'] = True
+
+        msgs = self.get_smtp_messages()
+        assert_equal(msgs, [])
+
+        # send email
+        test_email = {'recipient_name': 'Bob',
+                      'recipient_email': user['email'],
+                      'subject': 'Meeting',
+                      'body': 'The meeting is cancelled.',
+                      'headers': {'header1': 'value1'}}
+        mailer.mail_recipient(**test_email)
+
+        # check it went to the mock smtp server
+        msgs = self.get_smtp_messages()
+        assert_equal(len(msgs), 1)
+        msg = msgs[0]
+        assert_equal(msg[1], config['smtp.mail_from'])
+        assert_equal(msg[2], [test_email['recipient_email']])
+        assert test_email['headers'].keys()[0] in msg[3], msg[3]
+        assert test_email['headers'].values()[0] in msg[3], msg[3]
+        assert test_email['subject'] in msg[3], msg[3]
+        assert 'X-Mailer' not in test_email['headers'], \
+            "Should have skipped X-Mailer header"
         expected_body = self.mime_encode(test_email['body'],
                                          test_email['recipient_name'])
         assert_in(expected_body, msg[3])

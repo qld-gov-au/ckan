@@ -6,6 +6,7 @@ from email.parser import Parser
 from email.header import decode_header
 import hashlib
 import base64
+import logging
 
 from ckan.common import config
 import ckan.model as model
@@ -15,6 +16,43 @@ from ckan.tests.legacy.mock_mail_server import SmtpServerHarness
 
 import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
+
+
+log = logging.getLogger(__name__)
+
+
+def _test_user():
+    results = model.Session.query(model.User).\
+        filter(model.User.name == 'test_user_00').all()
+    if results:
+        model_obj = results[0]
+        if model_obj.reset_key:
+            # clean up existing user
+            model_obj.reset_key = None
+            model.Session.commit()
+        return {'name': model_obj.name, 'email': model_obj.email}
+    else:
+        return factories.User()
+
+
+def _test_group():
+    results = model.Session.query(model.Group).\
+        filter(model.Group.name == 'test_group_00').all()
+    if results:
+        model_obj = results[0]
+        return {'title': model_obj.title, 'is_organization': False}
+    else:
+        return factories.Group()
+
+
+def _test_org():
+    results = model.Session.query(model.Group).\
+        filter(model.Group.name == 'test_org_00').all()
+    if results:
+        model_obj = results[0]
+        return {'title': model_obj.title, 'is_organization': True}
+    else:
+        return factories.Organization()
 
 
 class MailerBase(SmtpServerHarness):
@@ -63,7 +101,7 @@ class MailerBase(SmtpServerHarness):
 class TestMailer(MailerBase):
 
     def test_mail_recipient(self):
-        user = factories.User()
+        user = _test_user()
 
         msgs = self.get_smtp_messages()
         assert_equal(msgs, [])
@@ -85,7 +123,8 @@ class TestMailer(MailerBase):
         assert test_email['headers'].keys()[0] in msg[3], msg[3]
         assert test_email['headers'].values()[0] in msg[3], msg[3]
         assert test_email['subject'] in msg[3], msg[3]
-        assert 'X-Mailer' in test_email['headers'], "Missing X-Mailer header"
+        log.debug("Checking %s for X-Mailer header", msg)
+        assert 'X-Mailer' in msg[3], "Missing X-Mailer header"
         expected_body = self.mime_encode(test_email['body'],
                                          test_email['recipient_name'])
         assert_in(expected_body, msg[3])
@@ -114,7 +153,8 @@ class TestMailer(MailerBase):
         assert test_email['headers'].keys()[0] in msg[3], msg[3]
         assert test_email['headers'].values()[0] in msg[3], msg[3]
         assert test_email['subject'] in msg[3], msg[3]
-        assert 'X-Mailer' not in test_email['headers'], \
+        log.debug("Checking %s for X-Mailer header", msg)
+        assert 'X-Mailer' not in msg[3], \
             "Should have skipped X-Mailer header"
         expected_body = self.mime_encode(test_email['body'],
                                          test_email['recipient_name'])

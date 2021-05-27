@@ -282,7 +282,8 @@ class ResourceUpload(object):
         upload_field_storage = resource.pop('upload', None)
         self.clear = resource.pop('clear_upload', None)
 
-        if self.url and config_mimetype_guess == 'file_ext' and urlparse(self.url).path:
+        if self.url and config_mimetype_guess == 'file_ext' \
+                and urlparse(self.url).path:
             self.mimetype = mimetypes.guess_type(self.url)[0]
 
         if isinstance(upload_field_storage, ALLOWED_UPLOAD_TYPES):
@@ -308,7 +309,7 @@ class ResourceUpload(object):
                     self.mimetype = magic.from_buffer(self.upload_file.read(),
                                                       mime=True)
                     self.upload_file.seek(0, os.SEEK_SET)
-                except IOError as e:
+                except IOError:
                     # Not that important if call above fails
                     self.mimetype = None
 
@@ -374,7 +375,7 @@ class ResourceUpload(object):
         if self.clear:
             try:
                 os.remove(filepath)
-            except OSError as e:
+            except OSError:
                 pass
 
     def delete(self, id, filename=None):

@@ -23,6 +23,7 @@ class MailerBase(SmtpServerHarness):
     def setup_class(cls):
 
         helpers.reset_db()
+        config.pop('ckan.hide_version', None)
 
         smtp_server = config.get('smtp.test_server')
         if smtp_server:

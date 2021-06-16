@@ -61,7 +61,6 @@ class MailerBase(SmtpServerHarness):
     def setup_class(cls):
 
         helpers.reset_db()
-        config.pop('ckan.hide_version', None)
 
         smtp_server = config.get('smtp.test_server')
         if smtp_server:
@@ -129,9 +128,9 @@ class TestMailer(MailerBase):
                                          test_email['recipient_name'])
         assert_in(expected_body, msg[3])
 
+    @helpers.change_config('ckan.hide_version', 'True')
     def test_mail_recipient_hiding_mailer(self):
         user = _test_user()
-        config['ckan.hide_version'] = True
 
         msgs = self.get_smtp_messages()
         assert_equal(msgs, [])

@@ -25,6 +25,9 @@ jobs:
       env: ${{ matrix.env }}
 
     steps:
+      - uses: actions/checkout@v2
+        timeout-minutes: 2
+
       - name: Run tests
         run: |
           nosetests $NOSETEST_COMMON_OPTIONS

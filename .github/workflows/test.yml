@@ -9,7 +9,7 @@ jobs:
       matrix:
         ckan-version: [2.8]
         env:
-          - { GIT_URL: 'https://github.com/qld-gov-au/ckan.git', GIT_BRANCH: 'qgov-master-2.8.8', NOSETEST_COMMON_OPTIONS: '-v --ckan --reset-db --with-pylons=test-core-github.ini --nologcapture --with-coverage --cover-package=ckan --cover-package=ckanext --with-xunit --xunit-file=/root/junit/junit.xml ckan ckanext' }
+          - { GIT_URL: 'https://github.com/qld-gov-au/ckan.git', GIT_BRANCH: 'qgov-master-2.8.8', NOSETEST_COMMON_OPTIONS: '-v --ckan --reset-db --with-pylons=test-core-github.ini --nologcapture --with-coverage --cover-package=ckan --cover-package=ckanext ckan ckanext' }
     services:
       postgres:
         image: ckan/ckan-postgres-dev:${{ matrix.ckan-version }}

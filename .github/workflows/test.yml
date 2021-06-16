@@ -28,10 +28,10 @@ jobs:
 
       - name: Install CKAN
         run: |
-          sudo pip install -r requirement-setuptools.txt
-          sudo pip install -r requirements.txt
-          sudo pip install -r dev-requirements.txt
-          sudo python setup.py develop
+          pip install -r requirement-setuptools.txt
+          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+          python setup.py develop
 
       - name: Run tests
         run: |

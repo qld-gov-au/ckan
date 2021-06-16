@@ -22,7 +22,6 @@ build/*
 tmp/*
 solr_runtime/*
 fl_notes.txt
-*.ini
 .noseids
 *~
 .idea

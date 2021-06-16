@@ -244,7 +244,7 @@ class TestCommonG(object):
 
         with app.flask_app.test_request_context():
 
-            assert u'flask.g' in text_type(ckan_g)
+            assert u'flask.g' in text_type(ckan_g), "'flask.g' not found in '{}'".format(ckan_g)
 
             flask.g.user = u'example'
 

@@ -19,7 +19,6 @@ jobs:
 
     name: CKAN ${{ matrix.ckan-version }}
     runs-on: ubuntu-20.04
-    env: ${{ matrix.env }}
 
     steps:
       - uses: actions/checkout@v2

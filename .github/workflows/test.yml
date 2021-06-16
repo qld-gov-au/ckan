@@ -8,8 +8,7 @@ jobs:
     strategy:
       matrix:
         ckan-version: [2.8]
-        env:
-          - { GIT_URL: 'https://github.com/qld-gov-au/ckan.git', GIT_BRANCH: 'qgov-master-2.8.8', NOSETEST_COMMON_OPTIONS: '-v --ckan --reset-db --with-pylons=test-core-github.ini --nologcapture --with-coverage --cover-package=ckan --cover-package=ckanext ckan ckanext' }
+
     services:
       postgres:
         image: ckan/ckan-postgres-dev:${{ matrix.ckan-version }}
@@ -20,14 +19,19 @@ jobs:
 
     name: CKAN ${{ matrix.ckan-version }}
     runs-on: ubuntu-20.04
-    container:
-      image: openknowledge/ckan-dev:${{ matrix.ckan-version }}
-      env: ${{ matrix.env }}
+    env: ${{ matrix.env }}
 
     steps:
       - uses: actions/checkout@v2
         timeout-minutes: 2
 
+      - name: Install CKAN
+        run: |
+          pip install -r requirement-setuptools.txt
+          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+          python setup.py develop
+
       - name: Run tests
         run: |
-          nosetests $NOSETEST_COMMON_OPTIONS
+          nosetests -v --ckan --reset-db --with-pylons=test-core-github.ini --nologcapture --with-coverage --cover-package=ckan --cover-package=ckanext ckan ckanext

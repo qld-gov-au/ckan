@@ -8,6 +8,7 @@ jobs:
     strategy:
       matrix:
         ckan-version: [2.8]
+        segment: ['0123', '4567', '89ab', 'cdef']
 
     services:
       postgres:
@@ -34,5 +35,7 @@ jobs:
           python setup.py develop
 
       - name: Run tests
+        env:
+          SEGMENT: ${{ matrix.segment }}
         run: |
-          nosetests -v --ckan --reset-db --with-pylons=test-core-github.ini --nologcapture --with-coverage --cover-package=ckan --cover-package=ckanext ckan ckanext
+          nosetests -v --ckan --reset-db --with-pylons=test-core-github.ini --nologcapture --with-coverage --cover-package=ckan --cover-package=ckanext ckan ckanext --segments $SEGMENT

@@ -124,7 +124,9 @@ SUPPORTED_CKAN_VERSIONS = 3
 
 def get_release_tags():
     git_tags = subprocess.check_output(
-        ['git', 'tag', '-l'], stderr=subprocess.STDOUT).split()
+        ['git', 'tag', '-l'],
+        stderr=subprocess.STDOUT,
+        cwd=os.path.dirname(__file__)).split()
 
     release_tags_ = [tag for tag in git_tags if tag.startswith('ckan-')]
 

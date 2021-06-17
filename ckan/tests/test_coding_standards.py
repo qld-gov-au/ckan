@@ -65,7 +65,7 @@ def test_building_the_docs():
     This test unfortunately does take quite a long time to run - rebuilding the
     docs from scratch just takes a long time.
 
-    This test will also fail is build_sphinx exits with non-zero status.
+    This test will also fail if build_sphinx exits with non-zero status.
 
     '''
     try:
@@ -78,8 +78,8 @@ def test_building_the_docs():
             stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as err:
         assert False, (
-            u"Building the docs failed with return code: {code}".format(
-                code=err.returncode))
+            u"Building the docs returned error code: {} and output: {}".format(
+                err.returncode, err.output))
     output_lines = output.split(u'\n')
 
     errors = [line for line in output_lines if u'ERROR' in line]

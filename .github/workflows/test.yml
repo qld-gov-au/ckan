@@ -25,6 +25,10 @@ jobs:
       image: python:2-stretch
 
     steps:
+      # Needed in order to check out CKAN as a proper repo
+      - name: Install Git
+        run: apt install -y git
+
       - uses: actions/checkout@v2
         timeout-minutes: 2
 

@@ -255,7 +255,7 @@ class Upload(object):
             hash, length = _file_hashnlength(filepath)
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:
-            logging.error("Could not retrieve meta data,  IOError thrown", e)
+            log.error("Could not retrieve meta data, IOError thrown: %s", e)
             return e
 
 
@@ -409,5 +409,5 @@ class ResourceUpload(object):
             hash, length = _file_hashnlength(filepath)
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:
-            logging.error("Could not retrieve meta data,  IOError thrown", e)
+            log.error("Could not retrieve meta data, IOError thrown: %s", e)
             return e

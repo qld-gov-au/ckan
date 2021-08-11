@@ -235,17 +235,30 @@ class Upload(object):
 
     def download(self, filename):
         ''' Generate file stream or redirect for file'''
-        # Get file from storage_path and filename
-        fileapp = paste.fileapp.FileApp(
-            os.path.join(self.storage_path, filename))
+        filepath = os.path.join(self.storage_path, filename)
+        if hasattr(request, 'call_application'):
+            return self._pylons_download(filepath)
+        else:
+            return self._flask_download(id, filepath)
+
+    def _pylons_download(self, filepath):
+        fileapp = paste.fileapp.FileApp(filepath)
 
         status, headers, app_iter = request.call_application(fileapp)
         response.headers.update(dict(headers))
-        content_type, content_enc = mimetypes.guess_type(filename)
+        content_type, content_enc = mimetypes.guess_type(filepath)
         if content_type:
             response.headers['Content-Type'] = content_type
         response.status = status
         return app_iter
+
+    def _flask_download(self, filepath):
+        import flask
+        resp = flask.send_file(filepath)
+        content_type, content_enc = mimetypes.guess_type(filepath)
+        if content_type:
+            resp.headers['Content-Type'] = content_type
+        return resp
 
     def metadata(self, filename):
         ''' Return metadata of file'''
@@ -388,6 +401,12 @@ class ResourceUpload(object):
     def download(self, id, filename=None):
         ''' Generate file stream or redirect for file'''
         filepath = self.get_path(id)
+        if hasattr(request, 'call_application'):
+            return self._pylons_download(filepath)
+        else:
+            return self._flask_download(id, filepath)
+
+    def _pylons_download(self, filepath):
         fileapp = paste.fileapp.FileApp(filepath)
         # may throw OSError, which should be handled by the controller
         # which will wrap it with abort(404, _('Resource data not found'))
@@ -400,6 +419,14 @@ class ResourceUpload(object):
             response.headers['Content-Type'] = content_type
         response.status = status
         return app_iter
+
+    def _flask_download(self, resource_id, filepath):
+        import flask
+        resp = flask.send_file(filepath)
+        if self.mimetype:
+            resp.headers['Content-Type'] = self.mimetype
+        plugins.toolkit.signals.resource_download.send(resource_id)
+        return resp
 
     def metadata(self, id, filename=None):
         ''' Return meta details of file'''

@@ -140,6 +140,18 @@ def _file_hashnlength(local_path):
     return (six.text_type(hasher.hexdigest()), length)
 
 
+def _add_download_headers(file_path, mime_type, response):
+    """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
+    to a a file download.
+    """
+    if mime_type:
+        response.headers['Content-Type'] = mime_type
+    if mime_type != 'application/pdf':
+        file_name = file_path.split('/')[-1]
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=' + file_name
+
+
 class Upload(object):
     def __init__(self, object_type, old_filename=None):
         ''' Setup upload by creating a subdirectory of the storage directory
@@ -247,8 +259,7 @@ class Upload(object):
         status, headers, app_iter = request.call_application(fileapp)
         response.headers.update(dict(headers))
         content_type, content_enc = mimetypes.guess_type(filepath)
-        if content_type:
-            response.headers['Content-Type'] = content_type
+        _add_download_headers(filepath, content_type, response)
         response.status = status
         return app_iter
 
@@ -256,8 +267,7 @@ class Upload(object):
         import flask
         resp = flask.send_file(filepath)
         content_type, content_enc = mimetypes.guess_type(filepath)
-        if content_type:
-            resp.headers['Content-Type'] = content_type
+        _add_download_headers(filepath, content_type, resp)
         return resp
 
     def metadata(self, filename):
@@ -415,17 +425,14 @@ class ResourceUpload(object):
         response.headers.update(dict(headers))
         content_type, content_enc = mimetypes.guess_type(
             self.url)
-        if content_type:
-            response.headers['Content-Type'] = content_type
+        _add_download_headers(filepath, content_type, response)
         response.status = status
         return app_iter
 
     def _flask_download(self, resource_id, filepath):
         import flask
         resp = flask.send_file(filepath)
-        if self.mimetype:
-            resp.headers['Content-Type'] = self.mimetype
-        plugins.toolkit.signals.resource_download.send(resource_id)
+        _add_download_headers(filepath, self.mimetype, resp)
         return resp
 
     def metadata(self, id, filename=None):

@@ -425,7 +425,6 @@ class ResourceUpload(object):
         resp = flask.send_file(filepath)
         if self.mimetype:
             resp.headers['Content-Type'] = self.mimetype
-        plugins.toolkit.signals.resource_download.send(resource_id)
         return resp
 
     def metadata(self, id, filename=None):

@@ -23,6 +23,8 @@ from six.moves.urllib.parse import urljoin, urlparse
 from six.moves.urllib.request import urlopen
 
 import sqlalchemy as sa
+from sqlalchemy import Column, Boolean, DateTime, Integer, Unicode
+from sqlalchemy.ext.declarative import declarative_base
 import routes
 import paste.script
 from paste.registry import Registry
@@ -32,6 +34,7 @@ import click
 from ckan.config.middleware import make_app
 import ckan.logic as logic
 import ckan.model as model
+from ckan.model.meta import metadata
 import ckan.include.rjsmin as rjsmin
 import ckan.include.rcssmin as rcssmin
 import ckan.plugins as p
@@ -330,6 +333,54 @@ class CkanCommand(paste.script.command.Command):
         self.site_user = load_config(self.options.config, load_site_user)
 
 
+log = logging.getLogger(__name__)
+
+
+Base_Table = declarative_base(metadata=metadata)
+
+
+class RevisionArchive(Base_Table):
+    __tablename__ = u'resource_revision_archive'
+
+    id = Column(Unicode, primary_key=True)
+    url = Column(Unicode)
+    format = Column(Unicode)
+    description = Column(Unicode)
+    position = Column(Integer)
+    revision_id = Column(Unicode, primary_key=True)
+    continuity_id = Column(Unicode)
+    hash = Column(Unicode)
+    state = Column(Unicode)
+    extras = Column(Unicode)
+    expired_id = Column(Unicode)
+    revision_timestamp = Column(DateTime)
+    expired_timestamp = Column(DateTime)
+    current = Column(Boolean)
+    name = Column(Unicode)
+    resource_type = Column(Unicode)
+    mimetype = Column(Unicode)
+    mimetype_inner = Column(Unicode)
+    size = Column(Integer)
+    last_modified = Column(DateTime)
+    cache_url = Column(Unicode)
+    cache_last_updated = Column(DateTime)
+    webstore_url = Column(Unicode)
+    webstore_last_updated = Column(DateTime)
+    created = Column(DateTime)
+    url_type = Column(Unicode)
+    package_id = Column(Unicode)
+
+
+def _create_archive_tables():
+    RevisionArchive.__table__.create()
+
+    log.info(u'Revision archival database table created')
+
+
+def _archive_tables_exist():
+    return RevisionArchive.__table__.exists()
+
+
 class ManageDb(CkanCommand):
     '''Perform various tasks on the database.
 
@@ -344,7 +395,8 @@ class ManageDb(CkanCommand):
     db load-only FILE_PATH         - load a pg_dump from a file but don\'t do
                                      the schema upgrade or search indexing [DEPRECATED]
     db create-from-model           - create database from the model (indexes not made)
-    db migrate-filestore           - migrate all uploaded data from the 2.1 filesore.
+    db migrate-filestore           - migrate all uploaded data from the 2.1 filestore.
+    db archive-revisions           - move obsolete resource revisions to an archive table
     '''
     summary = __doc__.split('\n')[0]
     usage = __doc__
@@ -396,6 +448,8 @@ class ManageDb(CkanCommand):
                 print('Creating DB: SUCCESS')
         elif cmd == 'migrate-filestore':
             self.migrate_filestore()
+        elif cmd == 'archive-revisions':
+            self.archive_revisions()
         else:
             error('Command %s not recognized' % cmd)
 
@@ -511,6 +565,47 @@ class ManageDb(CkanCommand):
                             {'id': id, 'revision_id': revision_id})
             Session.commit()
             print("Saved url %s" % url)
+
+    def archive_revisions(self):
+        """ Move obsolete (long since expired) resource revisions
+        to an archive table, so that they do not affect performance.
+
+        Revisions for 'near-realtime' and 'hourly' datasets are kept for 30 days.
+        Revisions for other datasets are kept for 90 days.
+        Current, active revisions are always kept, regardless of age.
+        """
+        print("Ensuring that the resource revision archive table exists...")
+        if not _archive_tables_exist():
+            _create_archive_tables()
+        from ckan.model import Session
+        condition_clause = """
+            expired_timestamp < current_date - {}
+            and package_id in (
+                select p.id from resource r
+                join package p on p.id = r.package_id
+                join package_extra pe on p.id = pe.package_id
+                where p.state = 'active'
+                and pe.state = 'active'
+                and pe.key = 'update_frequency'
+                and pe.value {} ('near-realtime', 'hourly')
+            )
+        """
+        archival_condition = "({}) or ({})".format(
+            condition_clause.format(30, 'in'),
+            condition_clause.format(90, 'not in')
+        )
+        print("Copying old resource revisions to archive table")
+        Session.execute("""
+            insert into resource_revision_archive (
+                select *
+                from resource_revision
+                where {})""".format(archival_condition))
+        print("Deleting old resource revisions from regular table")
+        Session.execute("""
+            delete
+            from resource_revision
+            where {}""".format(archival_condition))
+        Session.commit()
 
     def version(self):
         from ckan.model import Session

@@ -40,6 +40,7 @@ import ckan.include.rcssmin as rcssmin
 import ckan.plugins as p
 from ckan.common import config
 
+
 # This is a test Flask request context to be used internally.
 # Do not use it!
 _cli_test_request_context = None
@@ -81,17 +82,17 @@ def parse_db_config(config_key='sqlalchemy.url'):
     from ckan.common import config
     url = config[config_key]
     regex = [
-        '^\s*(?P<db_type>\w*)',
-        '://',
-        '(?P<db_user>[^:]*)',
-        ':?',
-        '(?P<db_pass>[^@]*)',
-        '@',
-        '(?P<db_host>[^/:]*)',
-        ':?',
-        '(?P<db_port>[^/]*)',
-        '/',
-        '(?P<db_name>[\w.-]*)'
+        r'^\s*(?P<db_type>\w*)',
+        r'://',
+        r'(?P<db_user>[^:]*)',
+        r':?',
+        r'(?P<db_pass>[^@]*)',
+        r'@',
+        r'(?P<db_host>[^/:]*)',
+        r':?',
+        r'(?P<db_port>[^/]*)',
+        r'/',
+        r'(?P<db_name>[\w.-]*)'
     ]
     db_details_match = re.match(''.join(regex), url)
     if not db_details_match:
@@ -150,8 +151,9 @@ def user_add(args):
         }
         user_dict = logic.get_action('user_create')(context, data_dict)
         pprint(user_dict)
-    except logic.ValidationError as e:
+    except logic.ValidationError:
         error(traceback.format_exc())
+
 
 ## from http://code.activestate.com/recipes/577058/ MIT licence.
 ## Written by Trent Mick
@@ -165,8 +167,8 @@ def query_yes_no(question, default="yes"):
 
     The "answer" return value is one of "yes" or "no".
     """
-    valid = {"yes": "yes",   "y": "yes",  "ye": "yes",
-             "no": "no",     "n": "no"}
+    valid = {"yes": "yes", "y": "yes", "ye": "yes",
+             "no": "no", "n": "no"}
     if default is None:
         prompt = " [y/n] "
     elif default == "yes":
@@ -179,7 +181,7 @@ def query_yes_no(question, default="yes"):
     while 1:
         sys.stdout.write(question + prompt)
         choice = input().strip().lower()
-        if default is not None and choice == '':
+        if default is not None and not choice:
             return default
         elif choice in valid.keys():
             return valid[choice]
@@ -302,7 +304,6 @@ def paster_click_group(summary):
     def cli(ctx, plugin, config):
         ctx.obj['config'] = config
 
-
     cli.summary = summary
     cli.group_name = u'ckan'
     return cli
@@ -406,7 +407,7 @@ class ManageDb(CkanCommand):
     def command(self):
         cmd = self.args[0]
 
-        self._load_config(cmd!='upgrade')
+        self._load_config(cmd != 'upgrade')
         import ckan.model as model
         import ckan.lib.search as search
 
@@ -502,8 +503,7 @@ class ManageDb(CkanCommand):
             return
         dump_path = self.args[1]
 
-        psql_cmd = self._get_psql_cmd() + ' -f %s'
-        pg_cmd = self._postgres_dump(dump_path)
+        self._postgres_dump(dump_path)
 
     def load(self, only_load=False):
         deprecation_warning(u"Use PostgreSQL's pg_restore instead.")
@@ -512,8 +512,7 @@ class ManageDb(CkanCommand):
             return
         dump_path = self.args[1]
 
-        psql_cmd = self._get_psql_cmd() + ' -f %s'
-        pg_cmd = self._postgres_load(dump_path)
+        self._postgres_load(dump_path)
         if not only_load:
             print('Upgrading DB')
             import ckan.model as model
@@ -654,7 +653,7 @@ class SearchIndexCommand(CkanCommand):
         self.parser.add_option('-e', '--commit-each', dest='commit_each',
                                action='store_true', default=False, help=
 '''Perform a commit after indexing each dataset. This ensures that changes are
-immediately available on the search, but slows significantly the process.
+immediately available on the search, but significantly slows the process.
 Default is false.''')
 
     def command(self):
@@ -733,20 +732,20 @@ Default is false.''')
             package_ids.append(row[0])
 
         def start(ids):
-            ## load actual enviroment for each subprocess, so each have thier own
+            ## load actual enviroment for each subprocess, so each have their own
             ## sa session
             self._load_config()
             from ckan.lib.search import rebuild, commit
             rebuild(package_ids=ids)
             commit()
 
-        def chunks(l, n):
-            """ Yield n successive chunks from l.
+        def chunks(lizt, n):
+            """ Yield n successive chunks from the list.
             """
-            newn = int(len(l) / n)
-            for i in xrange(0, n-1):
-                yield l[i*newn:i*newn+newn]
-            yield l[n*newn-newn:]
+            newn = int(len(lizt) / n)
+            for i in xrange(0, n - 1):
+                yield lizt[i * newn:i * newn + newn]
+            yield lizt[n * newn - newn:]
 
         processes = []
         for chunk in chunks(package_ids, mp.cpu_count()):
@@ -843,7 +842,7 @@ class RDFExport(CkanCommand):
                     r = urlopen(url).read()
                 except HTTPError as e:
                     if e.code == 404:
-                        error('Please install ckanext-dcat and enable the ' +
+                        error('Please install ckanext-dcat and enable the '
                               '`dcat` plugin to use the RDF serializations')
                 with open(fname, 'wb') as f:
                     f.write(r)
@@ -1116,7 +1115,7 @@ class DatasetCmd(CkanCommand):
         dataset = self._get_dataset(dataset_ref)
         old_state = dataset.state
 
-        rev = model.repo.new_revision()
+        model.repo.new_revision()
         dataset.delete()
         model.repo.commit_and_remove()
         dataset = self._get_dataset(dataset_ref)
@@ -1150,7 +1149,6 @@ class Ratings(CkanCommand):
 
     def command(self):
         self._load_config()
-        import ckan.model as model
 
         cmd = self.args[0]
         if cmd == 'count':
@@ -1289,11 +1287,9 @@ class Tracking(CkanCommand):
             f_out = csv.writer(fh)
             f_out.writerow(HEADINGS)
             recent_views_for_id = dict((r.id, r.count) for r in recent_views)
-            f_out.writerows([(r.id,
-                              r.name,
-                              r.count,
-                              recent_views_for_id.get(r.id, 0))
-                              for r in total_views])
+            f_out.writerows([
+                (r.id, r.name, r.count, recent_views_for_id.get(r.id, 0))
+                for r in total_views])
 
     def update_tracking(self, engine, summary_date):
         PACKAGE_URL = '/dataset/'
@@ -1319,7 +1315,7 @@ class Tracking(CkanCommand):
         engine.execute(sql, summary_date)
 
         # get ids for dataset urls
-        sql = '''UPDATE tracking_summary t
+        sql = r'''UPDATE tracking_summary t
                  SET package_id = COALESCE(
                         (SELECT id FROM package p
                         WHERE p.name = regexp_replace(' ' || t.url, '^[ ]{1}(/\w{2}){0,1}' || %s, ''))
@@ -1388,8 +1384,6 @@ class Tracking(CkanCommand):
             except KeyboardInterrupt:
                 print("Stopped.")
                 return
-            except:
-                raise
         print('search index rebuilding done.' + (' %i not found.' % (not_found) if not_found else ""))
 
 
@@ -1508,7 +1502,6 @@ class CreateTestDataCommand(CkanCommand):
 
     def command(self):
         self._load_config()
-        from ckan import plugins
         from create_test_data import CreateTestData
 
         if self.args:
@@ -1593,8 +1586,8 @@ class Profile(CkanCommand):
 
         def profile_url(url):
             try:
-                res = self.app.get(url, status=[200],
-                                   extra_environ={'REMOTE_USER': user})
+                self.app.get(url, status=[200],
+                             extra_environ={'REMOTE_USER': user})
             except paste.fixture.AppError:
                 print('App error: ', url.strip())
             except KeyboardInterrupt:
@@ -1804,8 +1797,8 @@ class CreateColorSchemeCommand(CkanCommand):
         ''' Create n related colours '''
         colors = []
         for i in xrange(num_colors):
-            ix = i * (1.0/num_colors)
-            _lightness = (lightness + (ix * 40))/100.
+            ix = i * (1.0 / num_colors)
+            _lightness = (lightness + (ix * 40)) / 100.
             if _lightness > 1.0:
                 _lightness = 1.0
             color = colorsys.hls_to_rgb(hue, _lightness, saturation)
@@ -1813,7 +1806,7 @@ class CreateColorSchemeCommand(CkanCommand):
             for part in color:
                 hex_color += '%02x' % int(part * 255)
             # check and remove any bad values
-            if not re.match('^\#[0-9a-f]{6}$', hex_color):
+            if not re.match(r'^\#[0-9a-f]{6}$', hex_color):
                 hex_color = '#FFFFFF'
             colors.append(hex_color)
         return colors
@@ -1911,13 +1904,13 @@ class TranslationsCommand(CkanCommand):
         # %(...)s  %s %0.3f %1$s %2$0.3f [1:...] {...} etc
 
         # sprintf bit after %
-        spf_reg_ex = "\+?(0|'.)?-?\d*(.\d*)?[\%bcdeufosxX]"
+        spf_reg_ex = r"\+?(0|'.)?-?\d*(.\d*)?[\%bcdeufosxX]"
 
-        extract_reg_ex = '(\%\([^\)]*\)' + spf_reg_ex + \
-                         '|\[\d*\:[^\]]*\]' + \
-                         '|\{[^\}]*\}' + \
-                         '|<[^>}]*>' + \
-                         '|\%((\d)*\$)?' + spf_reg_ex + ')'
+        extract_reg_ex = r'(\%\([^\)]*\)' + spf_reg_ex + \
+                         r'|\[\d*\:[^\]]*\]' + \
+                         r'|\{[^\}]*\}' + \
+                         r'|<[^>}]*>' + \
+                         r'|\%((\d)*\$)?' + spf_reg_ex + ')'
 
         for entry in po:
             msg = entry.msgid.encode('utf-8')
@@ -1985,7 +1978,7 @@ class MinifyCommand(CkanCommand):
                     self.minify_file(base_path)
             elif os.path.isdir(base_path):
                 for root, dirs, files in os.walk(base_path):
-                    dirs[:] = [d for d in dirs if not d in self.exclude_dirs]
+                    dirs[:] = [d for d in dirs if d not in self.exclude_dirs]
                     for filename in files:
                         path = os.path.join(root, filename)
                         if clean:
@@ -2128,7 +2121,8 @@ class LessCommand(CkanCommand):
 
             command = '%s %s %s' % (less_bin, main_less, main_css)
 
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            process = subprocess.Popen(
+                command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             output = process.communicate()
             print(output)
 
@@ -2270,8 +2264,6 @@ Not used when using the `-d` option.''')
                                           get_default_view_plugins
                                           )
 
-        log = logging.getLogger(__name__)
-
         view_plugins = []
 
         if not view_plugin_types:
@@ -2286,8 +2278,8 @@ Not used when using the `-d` option.''')
         loaded_view_plugins = [view_plugin.info()['name']
                                for view_plugin in view_plugins]
 
-        plugins_not_found = list(set(view_plugin_types) -
-                                 set(loaded_view_plugins))
+        plugins_not_found = list(set(view_plugin_types)
+                                 - set(loaded_view_plugins))
 
         if plugins_not_found:
             error('View plugin(s) not found : {0}. '.format(plugins_not_found)
@@ -2368,8 +2360,6 @@ Not used when using the `-d` option.''')
         Returns the updated data dict
         '''
 
-        log = logging.getLogger(__name__)
-
         if not self.options.search_params:
             return search_data_dict
 
@@ -2387,8 +2377,8 @@ Not used when using the `-d` option.''')
             else:
                 search_data_dict['fq'] = user_search_params['fq']
 
-        if (user_search_params.get('fq_list') and
-                isinstance(user_search_params['fq_list'], list)):
+        if (user_search_params.get('fq_list')
+                and isinstance(user_search_params['fq_list'], list)):
             search_data_dict['fq_list'].extend(user_search_params['fq_list'])
 
     def _search_datasets(self, page=1, view_types=[]):
@@ -2436,8 +2426,6 @@ Not used when using the `-d` option.''')
 
         from ckan.lib.datapreview import add_views_to_dataset_resources
 
-        log = logging.getLogger(__name__)
-
         datastore_enabled = 'datastore' in config['ckan.plugins'].split()
 
         loaded_view_plugins = self._get_view_plugins(view_plugin_types,
@@ -2454,8 +2442,8 @@ Not used when using the `-d` option.''')
 
             elif page == 1 and not self.options.assume_yes:
 
-                msg = ('\nYou are about to check {0} datasets for the ' +
-                       'following view plugins: {1}\n' +
+                msg = ('\nYou are about to check {0} datasets for the '
+                       'following view plugins: {1}\n'
                        ' Do you want to continue?')
 
                 confirm = query_yes_no(msg.format(query['count'],
@@ -2478,7 +2466,7 @@ Not used when using the `-d` option.''')
                     if views:
                         view_types = list(set([view['view_type']
                                                for view in views]))
-                        msg = ('Added {0} view(s) of type(s) {1} to ' +
+                        msg = ('Added {0} view(s) of type(s) {1} to '
                                'resources from dataset {2}')
                         log.debug(msg.format(len(views),
                                              ', '.join(view_types),
@@ -2494,9 +2482,6 @@ Not used when using the `-d` option.''')
         log.info('Done')
 
     def clear_views(self, view_plugin_types=[]):
-
-        log = logging.getLogger(__name__)
-
         if not self.options.assume_yes:
             if view_plugin_types:
                 msg = 'Are you sure you want to delete all resource views ' + \
@@ -2593,7 +2578,7 @@ class ConfigToolCommand(paste.script.command.Command):
                 config_tool.config_edit_using_option_strings(
                     config_filepath, options, self.options.section,
                     edit=self.options.edit)
-            except config_tool.ConfigToolError as e:
+            except config_tool.ConfigToolError:
                 error(traceback.format_exc())
 
 
@@ -2653,7 +2638,6 @@ class JobsCommand(CkanCommand):
     summary = __doc__.split(u'\n')[0]
     usage = __doc__
     min_args = 0
-
 
     def __init__(self, *args, **kwargs):
         super(JobsCommand, self).__init__(*args, **kwargs)

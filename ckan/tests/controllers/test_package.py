@@ -641,7 +641,7 @@ class TestPackageRead(object):
             assert "Test Dataset" in response.body
             assert "Just another test dataset" in response.body
 
-    def test_anonymous_users_cannot_read_private_datasets(self, app):
+    def test_anonymous_users_cannot_see_private_datasets(self, app):
         organization = factories.Organization()
         dataset = factories.Dataset(owner_org=organization["id"], private=True)
         response = app.get(
@@ -649,7 +649,7 @@ class TestPackageRead(object):
         )
         assert 404 == response.status_code
 
-    def test_user_not_in_organization_cannot_read_private_datasets(self, app):
+    def test_user_not_in_organization_cannot_see_private_datasets(self, app):
         user = factories.User()
         organization = factories.Organization()
         dataset = factories.Dataset(owner_org=organization["id"], private=True)
@@ -751,6 +751,31 @@ class TestPackageRead(object):
             extra_environ=env,
             status=404,
         )
+
+    # Test the 'reveal_private_datasets' flag
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    def test_anonymous_users_cannot_read_private_datasets(self, app):
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        response = app.get(
+            url_for("dataset.read", id=dataset["name"]),
+            follow_redirects=False
+        )
+        assert 302 == response.status_code
+        assert '/login' in response.headers[u"Location"]
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    def test_user_not_in_organization_cannot_read_private_datasets(self, app):
+        user = factories.User()
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        response = app.get(
+            url_for("dataset.read", id=dataset["name"]),
+            extra_environ={"REMOTE_USER": six.ensure_str(user["name"])},
+            status=403,
+        )
+        assert 403 == response.status_code
 
 
 @pytest.mark.usefixtures("clean_db", "with_request_context")
@@ -1255,7 +1280,7 @@ class TestResourceRead(object):
 
         app.get(url, status=200, extra_environ=env)
 
-    def test_user_not_in_organization_cannot_read_private_dataset(self, app):
+    def test_user_not_in_organization_cannot_see_resources_in_private_dataset(self, app):
         user = factories.User()
         env = {"REMOTE_USER": six.ensure_str(user["name"])}
         organization = factories.Organization()
@@ -1301,13 +1326,44 @@ class TestResourceRead(object):
             )
             assert "Just another test resource" in response.body
 
-    def test_anonymous_users_cannot_read_private_datasets(self, app):
+    def test_anonymous_users_cannot_see_resources_in_private_datasets(self, app):
         organization = factories.Organization()
         dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        resource = factories.Resource(package_id=dataset["id"])
         response = app.get(
             url_for("dataset.read", id=dataset["name"]), status=404
         )
         assert 404 == response.status_code
+
+    # Test the 'reveal_private_datasets' flag
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    def test_user_not_in_organization_cannot_read_resources_in_private_dataset(self, app):
+        user = factories.User()
+        env = {"REMOTE_USER": six.ensure_str(user["name"])}
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        resource = factories.Resource(package_id=dataset["id"])
+
+        url = url_for(
+            "{}_resource.read".format(dataset["type"]),
+            id=dataset["id"], resource_id=resource["id"]
+        )
+
+        response = app.get(url, status=403, extra_environ=env)
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    def test_anonymous_users_cannot_read_resources_in_private_datasets(self, app):
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        resource = factories.Resource(package_id=dataset["id"])
+        response = app.get(
+            url_for("{}_resource.read".format(dataset["type"]),
+                    id=dataset["id"], resource_id=resource["id"]),
+            follow_redirects=False
+        )
+        assert 302 == response.status_code
+        assert '/login' in response.headers[u"Location"]
 
 
 @pytest.mark.usefixtures("clean_db", "with_request_context")

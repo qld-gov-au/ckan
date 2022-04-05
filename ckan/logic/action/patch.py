@@ -70,6 +70,7 @@ def resource_patch(context, data_dict):
         'user': context['user'],
         'auth_user_obj': context['auth_user_obj'],
         'for_update': True,
+        'ignore_auth': context.get('ignore_auth', False),
     }
 
     resource_dict = _get_action('resource_show')(

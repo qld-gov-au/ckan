@@ -310,10 +310,11 @@ def package_update(context, data_dict):
         model.Session.rollback()
         raise ValidationError(errors)
 
-    #avoid revisioning by updating directly
-    model.Session.query(model.Package).filter_by(id=pkg.id).update(
-        {"metadata_modified": datetime.datetime.utcnow()})
-    model.Session.refresh(pkg)
+    if not context.get('resources_only', False):
+        #avoid revisioning by updating directly
+        model.Session.query(model.Package).filter_by(id=pkg.id).update(
+            {"metadata_modified": datetime.datetime.utcnow()})
+        model.Session.refresh(pkg)
 
     pkg = model_save.package_dict_save(data, context)
 
@@ -568,6 +569,7 @@ def package_resource_reorder(context, data_dict):
     new_resources = ordered_resources + existing_resources
     package_dict['resources'] = new_resources
 
+    context['resources_only'] = True
     _check_access('package_resource_reorder', context, package_dict)
     _get_action('package_update')(context, package_dict)
 
@@ -815,7 +817,7 @@ def user_update(context, data_dict):
     '''Update a user account.
 
     Normal users can only update their own user accounts. Sysadmins can update
-    any user account. Can not modify exisiting user's name.
+    any user account and modify existing usernames.
 
     .. note:: Update methods may delete parameters not explicitly provided in the
         data_dict. If you want to edit only a specific attribute use `user_patch`

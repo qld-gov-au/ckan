@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import logging
 import pytest
 import six
 from email.header import decode_header
@@ -14,6 +15,8 @@ import ckan.model as model
 import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
 from ckan.common import config
+
+log = logging.getLogger(__name__)
 
 
 class MailerBase(object):
@@ -34,6 +37,7 @@ class MailerBase(object):
 @pytest.mark.usefixtures("with_request_context", "clean_db")
 class TestMailer(MailerBase):
     def test_mail_recipient(self, mail_server):
+        config['ckan.hide_version'] = 'False'
         user = factories.User()
         msgs = mail_server.get_smtp_messages()
         assert msgs == []
@@ -58,6 +62,41 @@ class TestMailer(MailerBase):
         assert list(test_email["headers"].values())[0] in msg[3], msg[3]
         assert test_email["subject"] in msg[3], msg[3]
         assert msg[3].startswith('Content-Type: text/plain'), msg[3]
+        expected_body = self.mime_encode(
+            test_email["body"], test_email["recipient_name"]
+        )
+        assert expected_body in msg[3]
+
+    def test_mail_recipient_hiding_mailer(self, mail_server):
+        user = factories.User()
+        config['ckan.hide_version'] = 'True'
+
+        msgs = mail_server.get_smtp_messages()
+        assert msgs == []
+
+        # send email
+        test_email = {
+            "recipient_name": "Bob",
+            "recipient_email": user["email"],
+            "subject": "Meeting",
+            "body": "The meeting is cancelled.",
+            "headers": {"header1": "value1"},
+        }
+        mailer.mail_recipient(**test_email)
+
+        # check it went to the mock smtp server
+        msgs = mail_server.get_smtp_messages()
+        assert len(msgs) == 1
+        msg = msgs[0]
+        assert msg[1] == config["smtp.mail_from"]
+        assert msg[2] == [test_email["recipient_email"]]
+        assert list(test_email["headers"].keys())[0] in msg[3], msg[3]
+        assert list(test_email["headers"].values())[0] in msg[3], msg[3]
+        assert test_email["subject"] in msg[3], msg[3]
+        assert msg[3].startswith('Content-Type: text/plain'), msg[3]
+        log.debug("Checking %s for X-Mailer header", msg)
+        assert 'X-Mailer' not in msg[3], \
+            "Should have skipped X-Mailer header"
         expected_body = self.mime_encode(
             test_email["body"], test_email["recipient_name"]
         )

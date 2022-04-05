@@ -1,11 +1,13 @@
 # encoding: utf-8
 
+import hashlib
 import os
 import cgi
 import datetime
 import logging
 import magic
 import mimetypes
+import six
 from six.moves.urllib.parse import urlparse
 
 from werkzeug.datastructures import FileStorage as FlaskFileStorage
@@ -13,7 +15,7 @@ from werkzeug.datastructures import FileStorage as FlaskFileStorage
 import ckan.lib.munge as munge
 import ckan.logic as logic
 import ckan.plugins as plugins
-from ckan.common import config, aslist
+from ckan.common import config, aslist, request
 
 ALLOWED_UPLOAD_TYPES = (cgi.FieldStorage, FlaskFileStorage)
 MB = 1 << 20
@@ -108,6 +110,34 @@ def get_max_resource_size():
     return _max_resource_size
 
 
+def _file_hashnlength(local_path):
+    BLOCKSIZE = 65536
+    hasher = hashlib.sha1()
+    length = 0
+
+    with open(local_path, 'rb') as afile:
+        buf = afile.read(BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            length += len(buf)
+
+            buf = afile.read(BLOCKSIZE)
+
+    return (six.text_type(hasher.hexdigest()), length)
+
+
+def _add_download_headers(file_path, mime_type, response):
+    """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
+    to a a file download.
+    """
+    if mime_type:
+        response.headers['Content-Type'] = mime_type
+    if mime_type != 'application/pdf':
+        file_name = file_path.split('/')[-1]
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=' + file_name
+
+
 class Upload(object):
     def __init__(self, object_type, old_filename=None):
         ''' Setup upload by creating a subdirectory of the storage directory
@@ -150,6 +180,7 @@ class Upload(object):
         self.clear = data_dict.pop(clear_field, None)
         self.file_field = file_field
         self.upload_field_storage = data_dict.pop(file_field, None)
+        self.preserve_filename = data_dict.get('preserve_filename', None)
 
         if not self.storage_path:
             return
@@ -157,7 +188,9 @@ class Upload(object):
         if isinstance(self.upload_field_storage, ALLOWED_UPLOAD_TYPES):
             if self.upload_field_storage.filename:
                 self.filename = self.upload_field_storage.filename
-                self.filename = str(datetime.datetime.utcnow()) + self.filename
+                if not self.preserve_filename:
+                    self.filename = str(datetime.datetime.utcnow()) \
+                        + self.filename
                 self.filename = munge.munge_filename_legacy(self.filename)
                 self.filepath = os.path.join(self.storage_path, self.filename)
                 data_dict[url_field] = self.filename
@@ -224,6 +257,53 @@ class Upload(object):
         if types and type_ not in types:
             raise logic.ValidationError(err)
 
+    def delete(self, filename):
+        ''' Delete file we are pointing at'''
+        if not filename.startswith('http'):
+            try:
+                # Delete file from storage_path and filename
+                os.remove(os.path.join(self.storage_path, filename))
+            except OSError:
+                pass
+
+    def download(self, filename):
+        ''' Generate file stream or redirect for file'''
+        filepath = os.path.join(self.storage_path, filename)
+        if hasattr(request, 'call_application'):
+            return self._pylons_download(filepath)
+        else:
+            return self._flask_download(id, filepath)
+
+    def _pylons_download(self, filepath):
+        import paste
+        from pylons import response
+        fileapp = paste.fileapp.FileApp(filepath)
+
+        status, headers, app_iter = request.call_application(fileapp)
+        response.headers.update(dict(headers))
+        content_type, content_enc = mimetypes.guess_type(filepath)
+        _add_download_headers(filepath, content_type, response)
+        response.status = status
+        return app_iter
+
+    def _flask_download(self, filepath):
+        import flask
+        resp = flask.send_file(filepath)
+        content_type, content_enc = mimetypes.guess_type(filepath)
+        _add_download_headers(filepath, content_type, resp)
+        return resp
+
+    def metadata(self, filename):
+        ''' Return metadata of file'''
+        try:
+            filepath = os.path.join(self.storage_path, filename)
+            content_type, content_encoding = mimetypes.guess_type(filepath)
+            hash, length = _file_hashnlength(filepath)
+            return {'content_type': content_type, 'size': length, 'hash': hash}
+        except IOError as e:
+            log.error("Could not retrieve meta data, IOError thrown: %s", e)
+            return e
+
 
 class ResourceUpload(object):
     def __init__(self, resource):
@@ -243,13 +323,14 @@ class ResourceUpload(object):
         self.filename = None
         self.mimetype = None
 
-        url = resource.get('url')
+        self.url = resource.get('url')
 
         upload_field_storage = resource.pop('upload', None)
         self.clear = resource.pop('clear_upload', None)
 
-        if url and config_mimetype_guess == 'file_ext' and urlparse(url).path:
-            self.mimetype = mimetypes.guess_type(url)[0]
+        if self.url and config_mimetype_guess == 'file_ext' \
+                and urlparse(self.url).path:
+            self.mimetype = mimetypes.guess_type(self.url)[0]
 
         if bool(upload_field_storage) and \
                 isinstance(upload_field_storage, ALLOWED_UPLOAD_TYPES):
@@ -275,7 +356,7 @@ class ResourceUpload(object):
                     self.mimetype = magic.from_buffer(self.upload_file.read(),
                                                       mime=True)
                     self.upload_file.seek(0, os.SEEK_SET)
-                except IOError as e:
+                except IOError:
                     # Not that important if call above fails
                     self.mimetype = None
 
@@ -341,5 +422,55 @@ class ResourceUpload(object):
         if self.clear:
             try:
                 os.remove(filepath)
-            except OSError as e:
+            except OSError:
                 pass
+
+    def delete(self, id, filename=None):
+        ''' Delete file we are pointing at'''
+        try:
+            os.remove(self.get_path(id))
+        except OSError:
+            pass
+
+    def download(self, id, filename=None):
+        ''' Generate file stream or redirect for file'''
+        filepath = self.get_path(id)
+        if hasattr(request, 'call_application'):
+            return self._pylons_download(filepath)
+        else:
+            return self._flask_download(id, filepath)
+
+    def _pylons_download(self, filepath):
+        import paste
+        from pylons import response
+        fileapp = paste.fileapp.FileApp(filepath)
+        # may throw OSError, which should be handled by the controller
+        # which will wrap it with abort(404, _('Resource data not found'))
+        status, headers, app_iter = request.call_application(fileapp)
+
+        response.headers.update(dict(headers))
+        content_type, content_enc = mimetypes.guess_type(
+            self.url)
+        _add_download_headers(filepath, content_type, response)
+        response.status = status
+        return app_iter
+
+    def _flask_download(self, resource_id, filepath):
+        import flask
+        resp = flask.send_file(filepath)
+        _add_download_headers(filepath, self.mimetype, resp)
+        return resp
+
+    def metadata(self, id, filename=None):
+        ''' Return meta details of file'''
+        try:
+            filepath = self.get_path(id)
+            if self.mimetype:
+                content_type = self.mimetype
+            else:
+                content_type = mimetypes.guess_type(self.url)[0]
+            hash, length = _file_hashnlength(filepath)
+            return {'content_type': content_type, 'size': length, 'hash': hash}
+        except IOError as e:
+            log.error("Could not retrieve meta data, IOError thrown: %s", e)
+            return e

@@ -9,6 +9,25 @@ Changelog
 
 .. towncrier release notes start
 
+v.2.9.x 2022-xx-xx
+==================
+
+Major features
+--------------
+
+- Update to Interface IUploader, on get_uploader and get_resource_uploader, new to include new method signature metadata() which can be utilised by archiver and other plugins instead of trying on local disk directly
+- Add get api `resource_file_metadata_show` which takes resource id and returns { 'content_type': content_type, 'size': length, 'hash': hash } if found
+- Add delete resource binary when resource id 'deleted' by author/sysadmin
+- Redirect user to login if private dataset/resource and not logged in
+- SysAdmin can edit username
+- mailer.py, get.py - Hide ckan version on mail and response headers via config flag
+- pylons_app,py - verify folder is directory and skip instead of always mkdir (nfs may hang on network)
+- cleanup user reset to always go to reset success page even on error instead of homepage
+- ckan.po - 'Full name' renamed to 'Displayed Name'
+- patch.py - resource_patch context ignore auth passthrough for plugin integration to patch without user context (archiver/validator/etc)
+- update.py - Reduce deadlock on resource -> package parent updates where not required :: On package_resource_reorder add context resources_only = True, On Package update, don't update package level metadata_modified if resources_only is True
+
+
 v.2.9.7 2022-10-26
 ==================
 

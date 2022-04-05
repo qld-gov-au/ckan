@@ -18,14 +18,11 @@ import ckan.logic as logic
 import ckan.logic.action
 import ckan.logic.schema
 import ckan.lib.dictization.model_dictize as model_dictize
-import ckan.lib.jobs as jobs
 import ckan.lib.navl.dictization_functions
 import ckan.model as model
 import ckan.model.misc as misc
 import ckan.plugins as plugins
-import ckan.lib.search as search
-import ckan.lib.plugins as lib_plugins
-import ckan.lib.datapreview as datapreview
+from ckan.lib import datapreview, jobs, plugins as lib_plugins, search, uploader
 import ckan.authz as authz
 
 from ckan.common import _
@@ -1148,6 +1145,45 @@ def resource_view_list(context, data_dict):
         if datapreview.get_view_plugin(resource_view.view_type)
     ]
     return model_dictize.resource_view_list_dictize(resource_views, context)
+
+
+def resource_file_metadata_show(context, data_dict):
+    '''Get file metadata from a resource if it was uploaded.
+
+    :param id: the id of the resource
+    :type id: string
+
+    :returns: the meta data of resource file { 'content_type': content_type, 'size': length, 'hash': hash }
+    :rtype: dictionary
+    '''
+    model = context['model']
+    id = _get_or_bust(data_dict, 'id')
+
+    resource = model.Resource.get(id)
+    resource_context = dict(context, resource=resource)
+
+    if not resource:
+        raise NotFound
+
+    _check_access('resource_file_metadata_show', resource_context, data_dict)
+
+    pkg_dict = logic.get_action('package_show')(
+        dict(context),
+        {'id': resource.package.id,
+         'include_tracking': asbool(data_dict.get('include_tracking', False))})
+
+    for resource_dict in pkg_dict['resources']:
+        if resource_dict['id'] == id:
+            break
+    else:
+        log.error('Could not find resource %s after all', id)
+        raise NotFound(_('Resource was not found.'))
+
+    upload = uploader.get_resource_uploader(resource_dict)
+    try:
+        return upload.metadata(id)
+    except IOError:
+        raise NotFound
 
 
 def _group_or_org_show(context, data_dict, is_org=False):
@@ -2422,15 +2458,17 @@ def status_show(context, data_dict):
 
     '''
     _check_access('status_show', context, data_dict)
-    return {
+    site_info = {
         'site_title': config.get('ckan.site_title'),
         'site_description': config.get('ckan.site_description'),
         'site_url': config.get('ckan.site_url'),
-        'ckan_version': ckan.__version__,
         'error_emails_to': config.get('email_to'),
         'locale_default': config.get('ckan.locale_default'),
         'extensions': config.get('ckan.plugins').split(),
     }
+    if not asbool(config.get('ckan.hide_version')):
+        site_info['ckan_version'] = ckan.__version__
+    return site_info
 
 
 def vocabulary_list(context, data_dict):

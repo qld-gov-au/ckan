@@ -8,7 +8,6 @@ from datetime import datetime
 from flask import Blueprint
 from flask.views import MethodView
 from werkzeug.datastructures import MultiDict
-from ckan.common import asbool
 
 import six
 from six import string_types, text_type
@@ -20,7 +19,7 @@ import ckan.logic as logic
 import ckan.model as model
 import ckan.plugins as plugins
 import ckan.authz as authz
-from ckan.common import _, config, g, request
+from ckan.common import _, asbool, config, g, request
 from ckan.views.home import CACHE_PARAMETERS
 from ckan.lib.plugins import lookup_package_plugin
 from ckan.lib.render import TemplateNotFound
@@ -434,7 +433,18 @@ def read(package_type, id):
     try:
         pkg_dict = get_action(u'package_show')(context, data_dict)
         pkg = context[u'package']
-    except (NotFound, NotAuthorized):
+    except NotFound:
+        return base.abort(404, _(u'Dataset not found'))
+    except NotAuthorized:
+        if asbool(config.get(u'ckan.auth.reveal_private_datasets')):
+            if context['user']:
+                return base.abort(
+                    403, _(u'Unauthorized to read package %s') % id)
+            else:
+                return h.redirect_to(
+                    u'user.login',
+                    came_from=h.url_for(u'{}.read'.format(package_type), id=id)
+                )
         return base.abort(404, _(u'Dataset not found'))
 
     g.pkg_dict = pkg_dict

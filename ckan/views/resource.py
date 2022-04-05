@@ -15,7 +15,7 @@ import ckan.lib.uploader as uploader
 import ckan.logic as logic
 import ckan.model as model
 import ckan.plugins as plugins
-from ckan.common import _, g, request
+from ckan.common import _, asbool, config, g, request
 from ckan.views.home import CACHE_PARAMETERS
 from ckan.views.dataset import (
     _get_pkg_template, _get_package_type, _setup_template_variables
@@ -59,7 +59,20 @@ def read(package_type, id, resource_id):
 
     try:
         package = get_action(u'package_show')(context, {u'id': id})
-    except (NotFound, NotAuthorized):
+    except NotFound:
+        return base.abort(404, _(u'Dataset not found'))
+    except NotAuthorized:
+        if asbool(config.get(u'ckan.auth.reveal_private_datasets')):
+            if context['user']:
+                return base.abort(
+                    403, _(u'Unauthorized to read resource %s') % resource_id)
+            else:
+                return h.redirect_to(
+                    u'user.login',
+                    came_from=h.url_for(
+                        u'{}_resource.read'.format(package_type),
+                        id=id, resource_id=resource_id)
+                )
         return base.abort(404, _(u'Dataset not found'))
     activity_id = request.params.get(u'activity_id')
     if activity_id:

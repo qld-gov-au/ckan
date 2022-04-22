@@ -1757,9 +1757,10 @@ class IUploader(Interface):
 
         ``update_data_dict(data_dict, url_field, file_field, clear_field)``
 
-        Allow the data_dict to be manipulated before it reaches any
-        validators. Optionally, this data_dict can have the following attribute set:
-            preserve_filename (boolean):  If none, will append utcnow date to Filename
+        Allow the data_dict to be manipulated before it reaches any validators.
+        Optionally, this data_dict can have the following attribute set:
+            preserve_filename (boolean):  If false, then the current UTC time
+            (datetime.utcnow) will be prepended to the filename
 
         :param data_dict: data_dict to be updated
         :type data_dict: dictionary
@@ -1768,8 +1769,9 @@ class IUploader(Interface):
         :type url_field: string
 
         :param file_field: name of the key where the FieldStorage is kept (i.e
-            the field where the file data actually is). FileStorage must be an instance of;
-            cgi.FieldStorage or werkzeug.datastructures.FileStorage as FlaskFileStorage
+            the field where the file data actually is).
+            Must be an instance of either cgi.FieldStorage or
+            werkzeug.datastructures.FileStorage
         :type file_field: string
 
         :param clear_field: name of a boolean field which requests the upload

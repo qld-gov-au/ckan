@@ -2878,6 +2878,20 @@ class TestStatusShow(object):
         assert type(status[u"extensions"]) == list
         assert status[u"extensions"] == [u"stats"]
 
+    @helpers.change_config('ckan.hide_version', 'True')
+    def test_status_show_hiding_version(self):
+
+        status = helpers.call_action(u'status_show')
+
+        assert 'ckan_version' not in status, "Should have skipped CKAN version"
+        eq(status[u'site_url'], u'http://test.ckan.net')
+        eq(status[u'site_title'], u'CKAN')
+        eq(status[u'site_description'], u'')
+        eq(status[u'locale_default'], u'en')
+
+        eq(type(status[u'extensions']), list)
+        eq(status[u'extensions'], [u'stats'])
+
 
 class TestJobList(helpers.FunctionalRQTestBase):
     def test_all_queues(self):

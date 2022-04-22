@@ -7,7 +7,7 @@ import logging
 import sqlalchemy as sqla
 import six
 
-from ckan.lib import api_token, dictization, job, uploader
+from ckan.lib import api_token, dictization, jobs, uploader
 import ckan.logic
 import ckan.logic.action
 import ckan.plugins as plugins

@@ -18,14 +18,11 @@ import ckan.logic as logic
 import ckan.logic.action
 import ckan.logic.schema
 import ckan.lib.dictization.model_dictize as model_dictize
-import ckan.lib.jobs as jobs
 import ckan.lib.navl.dictization_functions
 import ckan.model as model
 import ckan.model.misc as misc
 import ckan.plugins as plugins
-import ckan.lib.search as search
-import ckan.lib.plugins as lib_plugins
-import ckan.lib.datapreview as datapreview
+from ckan.lib import datapreview, jobs, plugins as lib_plugins, search, uploader
 import ckan.authz as authz
 
 from ckan.common import _

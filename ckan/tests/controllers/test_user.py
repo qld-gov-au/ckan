@@ -355,6 +355,28 @@ class TestUser(object):
 
         assert "That login name can not be modified" in response
 
+    def test_edit_user_logged_in_username_change_by_sysadmin(self):
+        user_pass = 'TestPassword1'
+        user = factories.Sysadmin(password=user_pass)
+        app = self._get_test_app()
+
+        # Have to do an actual login as this test relies on repoze cookie handling.
+        response = app.post("/login_generic?came_from=/user/logged_in", data={
+            "login": user["name"],
+            "password": user_pass,
+            "save": ""
+        })
+
+        env = {'REMOTE_USER': six.ensure_str(user['name'])}
+        response = app.post(url=url_for("user.edit", id=user["id"]), extra_environ=env, data={
+            "email": user["email"],
+            "save": "",
+            "password1": "",
+            "password2": "",
+            "name": "new-name",
+        })
+        assert_true('Profile updated' in response)
+
     def test_perform_reset_for_key_change(self, app):
         password = "TestPassword1"
         params = {"password1": password, "password2": password}

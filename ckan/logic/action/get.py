@@ -2445,15 +2445,17 @@ def status_show(context, data_dict):
     :rtype: dictionary
 
     '''
-    return {
+    site_info = {
         'site_title': config.get('ckan.site_title'),
         'site_description': config.get('ckan.site_description'),
         'site_url': config.get('ckan.site_url'),
-        'ckan_version': ckan.__version__,
         'error_emails_to': config.get('email_to'),
         'locale_default': config.get('ckan.locale_default'),
         'extensions': config.get('ckan.plugins').split(),
     }
+    if not config.get('ckan.hide_version'):
+        site_info['ckan_version'] = ckan.__version__
+    return site_info
 
 
 def vocabulary_list(context, data_dict):

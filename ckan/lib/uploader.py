@@ -1,5 +1,6 @@
 # encoding: utf-8
 
+import hashlib
 import os
 import cgi
 import datetime

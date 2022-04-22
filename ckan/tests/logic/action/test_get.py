@@ -4,6 +4,7 @@ import datetime
 import re
 
 import copy
+import mock
 import pytest
 from six import text_type
 from six.moves import xrange
@@ -16,7 +17,13 @@ import ckan.tests.factories as factories
 import ckan.tests.helpers as helpers
 import ckan.plugins.toolkit as tk
 from ckan import __version__
+from ckan.lib import uploader as ckan_uploader
 from ckan.lib.search.common import SearchError
+from pyfakefs import fake_filesystem
+
+fs = fake_filesystem.FakeFilesystem()
+fake_os = fake_filesystem.FakeOsModule(fs)
+fake_open = fake_filesystem.FakeFileOpen(fs)
 
 
 @pytest.mark.usefixtures("clean_db", "with_request_context")
@@ -2444,6 +2451,58 @@ class TestShowResourceView(object):
 
         with pytest.raises(logic.NotFound):
             helpers.call_action("resource_view_show", id="does_not_exist")
+
+
+def mock_open_if_open_fails(*args, **kwargs):
+    try:
+        return real_open(*args, **kwargs)
+    except (OSError, IOError):
+        return fake_open(*args, **kwargs)
+
+
+class ShowResourceFileMetadata(object):
+
+    @helpers.change_config('ckan.storage_path', '/doesnt_exist')
+    @mock.patch.object(builtins, 'open', side_effect=mock_open_if_open_fails)
+    @mock.patch.object(ckan_uploader, 'os', fake_os)
+    @mock.patch.object(ckan_uploader, '_storage_path', new='/doesnt_exist')
+    def test_resource_file_metadata_show_meta_data_returned(self, _):
+        user = factories.User()
+        pkg = factories.Dataset(creator_user_id=user['id'])
+
+        url = url_for(
+            controller='api',
+            action='action',
+            logic_function='resource_create', ver='/3')
+        env = {'REMOTE_USER': user['name'].encode('ascii')}
+        postparams = {
+            'name': 'test-flask-upload',
+            'package_id': pkg['id']
+        }
+        upload_content = 'test-content,and2'
+        upload_info = ('upload', 'test-upload.csv', upload_content)
+        app = self._get_test_app()
+        resp = app.post(
+            url, params=postparams,
+            upload_files=[upload_info],
+            extra_environ=env
+        )
+        result = resp.json['result']
+        eq('upload', result['url_type'])
+        eq(len(upload_content), result['size'])
+
+        metaresult = helpers.call_action('resource_file_metadata_show', id=result['id'])
+        eq(len(upload_content), metaresult['size'])
+        eq('text/csv', metaresult['content_type'])
+        eq('', metaresult['hash'])
+
+    def test_resource_file_metadata_show_id_missing(self):
+        with pytest.raises(logic.ValidationError):
+            helpers.call_action('resource_file_metadata_show')
+
+    def test_resource_file_metadata_show_id_not_found(self):
+        with pytest.raises(logic.NotFound):
+            helpers.call_action('resource_file_metadata_show', id='does_not_exist')
 
 
 class TestGetHelpShow(object):

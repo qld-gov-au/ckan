@@ -1787,19 +1787,22 @@ class IUploader(Interface):
 
         Perform a delete.
 
-        :param filename: The filename to use when deleting a file, may be None depending on the storage provider.
+        :param filename: The filename to use when deleting a file,
+            may be None depending on the storage provider.
         :type filename: string
 
         ``download(filename)``
 
         Provide redirect url or file stream
 
-        :param filename: The filename to use when downloading a file, may be None depending on the storage provider.
+        :param filename: The filename to use when downloading a file,
+            may be None depending on the storage provider.
         :type filename: string
 
         ``metadata(filename)``
 
-        Collect metadata of file. Returns dict { 'content_type': content_type, 'size': length, 'hash': hash }
+        Collect metadata of file. Returns dict {
+            'content_type': content_type, 'size': length, 'hash': hash }
         Throws IOError if file does not exist
 
         :param filename: The filename to use when collecting metadata
@@ -1847,7 +1850,8 @@ class IUploader(Interface):
 
         :param id: resource id, used to delete file
         :type id: string
-        :param filename: The filename to use when storing a resource, may be None depending on the storage provider.
+        :param filename: The filename to use when storing a resource,
+            may be None depending on the storage provider.
         :type filename: string
 
         ``download(id, filename)``
@@ -1856,17 +1860,20 @@ class IUploader(Interface):
 
         :param id: resource id, used to locate file
         :type id: string
-        :param filename: The filename to use when storing a resource, may be None depending on the storage provider.
+        :param filename: The filename to use when storing a resource,
+            may be None depending on the storage provider.
         :type filename: string
 
         ``metadata(id, filename)``
 
-        Collect metadata of resource. Returns dict { 'content_type': content_type, 'size': length, 'hash': hash }
+        Collect metadata of resource. Returns dict {
+            'content_type': content_type, 'size': length, 'hash': hash }
         Throws IOError if file does not exist
 
         :param id: resource id, used to locate file
         :type id: string
-        :param filename: The filename to use when collecting metadata, may be None depending on the storage provider.
+        :param filename: The filename to use when collecting metadata,
+            may be None depending on the storage provider.
         :type filename: string
         '''
 

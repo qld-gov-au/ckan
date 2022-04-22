@@ -1,14 +1,12 @@
 # encoding: utf-8
 
-import __builtin__ as builtins
-
 import datetime
 import re
 
 import copy
 import mock
 import pytest
-from six import text_type
+from six import PY3, text_type
 from six.moves import xrange
 
 from ckan import model
@@ -26,6 +24,10 @@ from pyfakefs import fake_filesystem
 fs = fake_filesystem.FakeFilesystem()
 fake_os = fake_filesystem.FakeOsModule(fs)
 fake_open = fake_filesystem.FakeFileOpen(fs)
+if PY3:
+    mock_open_path = 'builtins.open'
+else:
+    mock_open_path = '__builtin__.open'
 
 
 @pytest.mark.usefixtures("clean_db", "with_request_context")
@@ -2465,7 +2467,7 @@ def mock_open_if_open_fails(*args, **kwargs):
 class ShowResourceFileMetadata(object):
 
     @helpers.change_config('ckan.storage_path', '/doesnt_exist')
-    @mock.patch.object(builtins, 'open', side_effect=mock_open_if_open_fails)
+    @mock.patch(mock_open_path, side_effect=mock_open_if_open_fails)
     @mock.patch.object(ckan_uploader, 'os', fake_os)
     @mock.patch.object(ckan_uploader, '_storage_path', new='/doesnt_exist')
     def test_resource_file_metadata_show_meta_data_returned(self, _):

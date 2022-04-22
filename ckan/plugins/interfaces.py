@@ -1759,8 +1759,8 @@ class IUploader(Interface):
 
         Allow the data_dict to be manipulated before it reaches any validators.
         Optionally, this data_dict can have the following attribute set:
-            preserve_filename (boolean):  If false, then the current UTC time
-            (datetime.utcnow) will be prepended to the filename
+        preserve_filename (boolean):  If false, then the current UTC time
+        (datetime.utcnow) will be prepended to the filename.
 
         :param data_dict: data_dict to be updated
         :type data_dict: dictionary

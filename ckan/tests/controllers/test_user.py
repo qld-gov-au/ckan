@@ -355,10 +355,9 @@ class TestUser(object):
 
         assert "That login name can not be modified" in response
 
-    def test_edit_user_logged_in_username_change_by_sysadmin(self):
+    def test_edit_user_logged_in_username_change_by_sysadmin(self, app):
         user_pass = 'TestPassword1'
         user = factories.Sysadmin(password=user_pass)
-        app = self._get_test_app()
 
         # Have to do an actual login as this test relies on repoze cookie handling.
         response = app.post("/login_generic?came_from=/user/logged_in", data={

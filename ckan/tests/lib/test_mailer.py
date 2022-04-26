@@ -74,7 +74,7 @@ class TestMailer(MailerBase):
         config['ckan.hide_version'] = False
         user = _test_user()
 
-        msgs = self.get_smtp_messages()
+        msgs = mail_server.get_smtp_messages()
         assert_equal(msgs, [])
 
         # send email
@@ -86,7 +86,7 @@ class TestMailer(MailerBase):
         mailer.mail_recipient(**test_email)
 
         # check it went to the mock smtp server
-        msgs = self.get_smtp_messages()
+        msgs = mail_server.get_smtp_messages()
         assert_equal(len(msgs), 1)
         msg = msgs[0]
         assert_equal(msg[1], config['smtp.mail_from'])
@@ -100,7 +100,7 @@ class TestMailer(MailerBase):
                                          test_email['recipient_name'])
         assert_in(expected_body, msg[3])
 
-    def test_mail_recipient_hiding_mailer(self):
+    def test_mail_recipient_hiding_mailer(self, mail_server):
         user = _test_user()
         config['ckan.hide_version'] = True
 

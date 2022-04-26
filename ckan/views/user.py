@@ -664,7 +664,7 @@ class RequestResetView(MethodView):
                                 'or contact an administrator for help'))
                 log.exception(e)
                 return h.redirect_to(config.get(
-                    'ckan.user_reset_landing_page', u'home.index'))
+                    u'ckan.user_reset_landing_page', u'home.index'))
 
         # always tell the user it succeeded, because otherwise we reveal
         # which accounts exist or not
@@ -672,7 +672,7 @@ class RequestResetView(MethodView):
             _(u'A reset link has been emailed to you '
               '(unless the account specified does not exist)'))
         return h.redirect_to(config.get(
-            'ckan.user_reset_landing_page', u'home.index'))
+            u'ckan.user_reset_landing_page', u'home.index'))
 
     def get(self):
         self._prepare()
@@ -741,7 +741,7 @@ class PerformResetView(MethodView):
 
             h.flash_success(_(u'Your password has been reset.'))
             return h.redirect_to(config.get(
-                'ckan.user_reset_landing_page', u'home.index'))
+                u'ckan.user_reset_landing_page', u'home.index'))
         except logic.NotAuthorized:
             h.flash_error(_(u'Unauthorized to edit user %s') % id)
         except logic.NotFound:

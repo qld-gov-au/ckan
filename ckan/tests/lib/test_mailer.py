@@ -71,7 +71,7 @@ class MailerBase(object):
 @pytest.mark.usefixtures("with_request_context", "clean_db")
 class TestMailer(MailerBase):
     def test_mail_recipient(self, mail_server):
-        config['ckan.hide_version'] = False
+        config['ckan.hide_version'] = 'False'
         user = _test_user()
 
         msgs = mail_server.get_smtp_messages()
@@ -102,7 +102,7 @@ class TestMailer(MailerBase):
 
     def test_mail_recipient_hiding_mailer(self, mail_server):
         user = _test_user()
-        config['ckan.hide_version'] = True
+        config['ckan.hide_version'] = 'True'
 
         msgs = mail_server.get_smtp_messages()
         assert msgs == []

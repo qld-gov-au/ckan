@@ -2889,13 +2889,13 @@ class TestStatusShow(object):
         status = helpers.call_action(u'status_show')
 
         assert 'ckan_version' not in status, "Should have skipped CKAN version"
-        eq(status[u'site_url'], u'http://test.ckan.net')
-        eq(status[u'site_title'], u'CKAN')
-        eq(status[u'site_description'], u'')
-        eq(status[u'locale_default'], u'en')
+        assert status[u'site_url'] == u'http://test.ckan.net'
+        assert status[u'site_title'] == u'CKAN'
+        assert status[u'site_description'] == u''
+        assert status[u'locale_default'] == u'en'
 
-        eq(type(status[u'extensions']), list)
-        eq(status[u'extensions'], [u'stats'])
+        assert type(status[u'extensions']) == list
+        assert status[u'extensions'] == [u'stats']
 
 
 class TestJobList(helpers.FunctionalRQTestBase):

@@ -75,7 +75,7 @@ class TestMailer(MailerBase):
         user = _test_user()
 
         msgs = mail_server.get_smtp_messages()
-        assert_equal(msgs, [])
+        assert msgs == []
 
         # send email
         test_email = {'recipient_name': 'Bob',
@@ -87,10 +87,10 @@ class TestMailer(MailerBase):
 
         # check it went to the mock smtp server
         msgs = mail_server.get_smtp_messages()
-        assert_equal(len(msgs), 1)
+        assert len(msgs) == 1
         msg = msgs[0]
-        assert_equal(msg[1], config['smtp.mail_from'])
-        assert_equal(msg[2], [test_email['recipient_email']])
+        assert msg[1] == config['smtp.mail_from']
+        assert msg[2] == [test_email['recipient_email']]
         assert test_email['headers'].keys()[0] in msg[3], msg[3]
         assert test_email['headers'].values()[0] in msg[3], msg[3]
         assert test_email['subject'] in msg[3], msg[3]

@@ -60,7 +60,6 @@ def _mail_recipient(recipient_name, recipient_email,
     msg['Date'] = utils.formatdate(time())
     if not ckan.common.asbool(config.get('ckan.hide_version')):
         msg['X-Mailer'] = "CKAN %s" % ckan.__version__
-    msg['X-Mailer'] = "CKAN %s" % ckan.__version__
     if reply_to and reply_to != '':
         msg['Reply-to'] = reply_to
 

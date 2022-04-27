@@ -363,7 +363,8 @@ class TestUser(object):
             "save": ""
         })
 
-        response = app.post(url=url_for("user.edit", id=user["name"]), data={
+        env = {"REMOTE_USER": six.ensure_str(user["name"])}
+        response = app.post(url=url_for("user.edit", id=user["name"]), extra_environ=env, data={
             "email": user["email"],
             "old_password": user_pass,
             "name": "new-name",

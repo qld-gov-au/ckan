@@ -366,11 +366,9 @@ class TestUser(object):
             "save": ""
         })
 
-        response = app.post(url=url_for("user.edit", id=user["id"]), data={
+        response = app.post(url=url_for("user.edit", id=user["name"]), data={
             "email": user["email"],
-            "save": "",
-            "password1": "",
-            "password2": "",
+            "old_password": user_pass,
             "name": "new-name",
         })
         assert_true('Profile updated' in response)

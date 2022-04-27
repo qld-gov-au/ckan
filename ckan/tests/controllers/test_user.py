@@ -371,7 +371,7 @@ class TestUser(object):
             "old_password": user_pass,
             "name": "new-name",
         })
-        assert_true('Profile updated' in response)
+        assert 'Profile updated' in response
 
     def test_perform_reset_for_key_change(self, app):
         password = "TestPassword1"

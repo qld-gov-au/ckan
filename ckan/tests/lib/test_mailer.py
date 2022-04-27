@@ -90,10 +90,10 @@ class TestMailer(MailerBase):
         assert len(msgs) == 1
         msg = msgs[0]
         assert msg[1] == config['smtp.mail_from']
-        assert msg[2] == [test_email['recipient_email']]
-        assert test_email['headers'].keys()[0] in msg[3], msg[3]
-        assert test_email['headers'].values()[0] in msg[3], msg[3]
-        assert test_email['subject'] in msg[3], msg[3]
+        assert msg[2] == [test_email["recipient_email"]]
+        assert list(test_email["headers"].keys())[0] in msg[3], msg[3]
+        assert list(test_email["headers"].values())[0] in msg[3], msg[3]
+        assert test_email["subject"] in msg[3], msg[3]
         log.debug("Checking %s for X-Mailer header", msg)
         assert 'X-Mailer' in msg[3], "Missing X-Mailer header"
         expected_body = self.mime_encode(test_email['body'],

@@ -98,7 +98,7 @@ class TestMailer(MailerBase):
         assert 'X-Mailer' in msg[3], "Missing X-Mailer header"
         expected_body = self.mime_encode(test_email['body'],
                                          test_email['recipient_name'])
-        assert_in(expected_body, msg[3])
+        assert expected_body in msg[3]
 
     def test_mail_recipient_hiding_mailer(self, mail_server):
         user = _test_user()

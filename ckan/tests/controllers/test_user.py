@@ -368,6 +368,8 @@ class TestUser(object):
             "email": user["email"],
             "save": "",
             "old_password": user_pass,
+            "password1": "",
+            "password2": "",
             "name": "new-name",
         })
         print(response.body)

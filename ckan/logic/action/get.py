@@ -2453,7 +2453,7 @@ def status_show(context, data_dict):
         'locale_default': config.get('ckan.locale_default'),
         'extensions': config.get('ckan.plugins').split(),
     }
-    if not config.get('ckan.hide_version'):
+    if not asbool(config.get('ckan.hide_version')):
         site_info['ckan_version'] = ckan.__version__
     return site_info
 

@@ -460,7 +460,10 @@ class ResourceUpload(object):
         ''' Return meta details of file'''
         try:
             filepath = self.get_path(id)
-            content_type, content_encoding = mimetypes.guess_type(self.url)
+            if self.mimetype:
+                content_type = self.mimetype
+            else:
+                content_type = mimetypes.guess_type(self.url)[0]
             hash, length = _file_hashnlength(filepath)
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:

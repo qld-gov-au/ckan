@@ -15,7 +15,7 @@ from werkzeug.datastructures import FileStorage as FlaskFileStorage
 import ckan.lib.munge as munge
 import ckan.logic as logic
 import ckan.plugins as plugins
-from ckan.common import config, aslist, request, response
+from ckan.common import config, aslist, request
 
 ALLOWED_UPLOAD_TYPES = (cgi.FieldStorage, FlaskFileStorage)
 MB = 1 << 20
@@ -276,6 +276,7 @@ class Upload(object):
 
     def _pylons_download(self, filepath):
         import paste
+        from pylons import response
         fileapp = paste.fileapp.FileApp(filepath)
 
         status, headers, app_iter = request.call_application(fileapp)
@@ -441,6 +442,7 @@ class ResourceUpload(object):
 
     def _pylons_download(self, filepath):
         import paste
+        from pylons import response
         fileapp = paste.fileapp.FileApp(filepath)
         # may throw OSError, which should be handled by the controller
         # which will wrap it with abort(404, _('Resource data not found'))

@@ -189,11 +189,11 @@ def download(package_type, id, resource_id, filename=None):
 
     if rsc.get(u'url_type') == u'upload':
         upload = uploader.get_resource_uploader(rsc)
-        filepath = upload.get_path(rsc[u'id'])
-        resp = flask.send_file(filepath)
-        if rsc.get(u'mimetype'):
-            resp.headers[u'Content-Type'] = rsc[u'mimetype']
-        return resp
+        try:
+            return upload.download(rsc['id'], filename)
+        except (IOError, OSError):
+            # includes FileNotFoundError
+            h.abort(404, _('Resource data not found'))
 
     elif u'url' not in rsc:
         return base.abort(404, _(u'No download is available'))

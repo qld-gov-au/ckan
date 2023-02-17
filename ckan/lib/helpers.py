@@ -290,6 +290,18 @@ def _get_auto_flask_context():
 
 
 @core_helper
+def default_url_for(package_type, **kw):
+    '''Return the URL for an endpoint given some parameters, or use the default '/dataset' url if unable.
+
+    This is a wrapper for :py:func:`url_for` that defaults to using 'dataset.read' should the original arguments fail
+    '''
+    try:
+        url_for('{0}.read'.format(package_type), **kw)
+    except FlaskRouteBuildError:
+        return url_for('dataset.read', **kw)
+
+
+@core_helper
 def url_for(*args, **kw):
     '''Return the URL for an endpoint given some parameters.
 

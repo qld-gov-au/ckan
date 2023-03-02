@@ -234,7 +234,7 @@ def list_tokens(username):
                 Strip out microseconds to force formatting as isoformat doesnt
                 have a timespec param on Python 2.
                 """
-                accessed = str(datetime(
+                accessed = datetime(
                     accessed.year,
                     accessed.month,
                     accessed.day,

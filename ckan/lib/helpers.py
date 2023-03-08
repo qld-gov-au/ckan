@@ -331,16 +331,26 @@ def url_for(*args, **kw):
     try:
         return base_url_for(*args, **kw)
     except FlaskRouteBuildError:
-        # If the url failed, try again but replace the custom dataset type with the default 'dataset'
+        # If the url failed, try again but replace any custom dataset type in use with the default 'dataset'
+        retry_with_default = False
+        # Update args if a custom dataset type was set there
         if (len(args) and '.' in args[0]
-                and not args[0].startswith('/')):
+                and not args[0].startswith('/')
+                and not args[0].startswith('dataset.')):
             args = (args[0].split('.', 1),)
             args = 'dataset.' + args[1]
+            retry_with_default = True
 
-        if kw.get('controller'):
+        # Update kw controller if a custom dataset type was set there
+        if (kw.get('controller')
+                and kw.get('controller') != 'dataset'):
             kw.update({'controller': 'dataset'})
+            retry_with_default = True
 
-        return base_url_for(*args, **kw)
+        if retry_with_default:
+            return base_url_for(*args, **kw)
+        else:
+            raise
 
 
 @core_helper

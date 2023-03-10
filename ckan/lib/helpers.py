@@ -338,7 +338,7 @@ def url_for(*args, **kw):
                 and not args[0].startswith('/')
                 and not args[0].startswith('dataset.')):
             args = args[0].split('.', 1)
-            args = 'dataset.' + args[1]
+            args = ('dataset.' + args[1],)
             retry_with_default = True
 
         # Update kw controller if a custom dataset type was set there

@@ -337,7 +337,7 @@ def url_for(*args, **kw):
         if (len(args) and '.' in args[0]
                 and not args[0].startswith('/')
                 and not args[0].startswith('dataset.')):
-            args = (args[0].split('.', 1),)
+            args = args[0].split('.', 1)
             args = 'dataset.' + args[1]
             retry_with_default = True
 

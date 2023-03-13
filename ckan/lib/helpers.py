@@ -1190,7 +1190,16 @@ def _make_menu_item(menu_item, title, **kw):
     menu_item = map_pylons_to_flask_route_name(menu_item)
     _menu_items = config['routes.named_routes']
     if menu_item not in _menu_items:
-        raise Exception('menu item `%s` cannot be found' % menu_item)
+        # Try with default dataset
+        if ('.' in menu_item
+                and not menu_item.startswith('/')
+                and not menu_item.startswith('dataset.')):
+            menu_item_default = 'dataset.' + menu_item.split('.', 1)[1]
+        else:
+            raise Exception('menu item `%s` cannot be found' % menu_item)
+        if menu_item_default not in _menu_items:
+            raise Exception('menu items `%s` and `%s` cannot be found' % (menu_item, menu_item_default))
+        menu_item = menu_item_default
     item = copy.copy(_menu_items[menu_item])
     item.update(kw)
     active = _link_active(item)

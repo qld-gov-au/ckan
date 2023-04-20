@@ -45,7 +45,6 @@ import ckan.authz as authz
 import ckan.plugins as p
 import ckan
 
-from ckan.lib.pagination import Page
 from ckan.common import _, ungettext, c, g, request, session, json
 from ckan.lib.webassets_tools import include_asset, render_assets
 from markupsafe import Markup, escape
@@ -331,7 +330,8 @@ def url_for(*args, **kw):
     try:
         return base_url_for(*args, **kw)
     except FlaskRouteBuildError:
-        # If the url failed, try again but replace any custom dataset type in use with the default 'dataset'
+        # If the url failed, try again but replace any custom dataset type in
+        #  use with the default 'dataset'
         retry_with_default = False
         # Update args if a custom dataset type was set there
         if (len(args) and '.' in args[0]
@@ -1198,7 +1198,8 @@ def _make_menu_item(menu_item, title, **kw):
         else:
             raise Exception('menu item `%s` cannot be found' % menu_item)
         if menu_item_default not in _menu_items:
-            raise Exception('menu items `%s` and `%s` cannot be found' % (menu_item, menu_item_default))
+            raise Exception('menu items `%s` and `%s` cannot be found'
+                            % (menu_item, menu_item_default))
         menu_item = menu_item_default
     item = copy.copy(_menu_items[menu_item])
     item.update(kw)

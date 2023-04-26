@@ -619,7 +619,8 @@ def user_name_validator(key: FlattenKey, data: FlattenDataDict,
             # existing user's name to that name.
             errors[key].append(_('That login name is not available.'))
     elif user_obj_from_context:
-        if user_obj_from_context.sysadmin == True:
+        requester = context.get('auth_user_obj', None)
+        if requester and requester.sysadmin == True:
             return
         old_user = model.User.get(user_obj_from_context.id)
         if old_user is not None and old_user.state != model.State.PENDING:

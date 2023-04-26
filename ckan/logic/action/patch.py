@@ -73,6 +73,7 @@ def resource_patch(context: Context,
         'session': context['session'],
         'user': context['user'],
         'auth_user_obj': context['auth_user_obj'],
+        'ignore_auth': context.get('ignore_auth', False),
         'for_update': True
     }
 

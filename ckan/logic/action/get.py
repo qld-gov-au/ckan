@@ -1184,7 +1184,7 @@ def resource_view_list(context: Context,
 
 def resource_file_metadata_show(
         context: Context, data_dict: DataDict
-        ) -> Union[dict[str, Any], IOError:
+        ) -> Union[dict[str, Any], IOError]:
     '''Get file metadata from a resource if it was uploaded.
 
     :param id: the id of the resource

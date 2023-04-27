@@ -14,10 +14,9 @@ from urllib.parse import urlparse
 
 from werkzeug.datastructures import FileStorage as FlaskFileStorage
 
-import ckan.lib.munge as munge
-import ckan.logic as logic
-import ckan.plugins as plugins
+from ckan import logic, plugins
 from ckan.common import config
+from ckan.lib import base, munge
 from ckan.types import ErrorDict, PUploader, PResourceUploader, Response
 
 ALLOWED_UPLOAD_TYPES = (cgi.FieldStorage, FlaskFileStorage)
@@ -115,7 +114,7 @@ def _file_hashnlength(local_path: str) -> tuple[str, int]:
 
 
 def _add_download_headers(file_path: str,
-                          mime_type: str,
+                          mime_type: Optional[str],
                           response: Response) -> None:
     """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
     to a a file download.
@@ -150,15 +149,16 @@ class Upload(object):
         path = get_storage_path()
         if not path:
             return
-        self.storage_path = os.path.join(path, 'storage',
-                                         'uploads', object_type)
+        path = os.path.join(path, 'storage', 'uploads', object_type)
+        self.storage_path = path
+
         # check if the storage directory is already created by
         # the user or third-party
-        if os.path.isdir(self.storage_path):
+        if os.path.isdir(path):
             pass
         else:
             try:
-                os.makedirs(self.storage_path)
+                os.makedirs(path)
             except OSError as e:
                 # errno 17 is file already exists
                 if e.errno != 17:
@@ -166,7 +166,14 @@ class Upload(object):
         self.object_type = object_type
         self.old_filename = old_filename
         if old_filename:
-            self.old_filepath = os.path.join(self.storage_path, old_filename)
+            self.old_filepath = os.path.join(path, old_filename)
+
+    def _get_storage_path_for(self, filename: str) -> str:
+        '''Function to get the path to a stored file.
+        Storage path must be configured.
+        '''
+        assert self.storage_path
+        return os.path.join(self.storage_path or '', filename)
 
     def update_data_dict(self, data_dict: dict[str, Any], url_field: str,
                          file_field: str, clear_field: str) -> None:
@@ -193,7 +200,7 @@ class Upload(object):
                     self.filename = str(datetime.datetime.utcnow()) \
                         + self.filename
                 self.filename = munge.munge_filename_legacy(self.filename)
-                self.filepath = os.path.join(self.storage_path, self.filename)
+                self.filepath = self._get_storage_path_for(self.filename)
                 data_dict[url_field] = self.filename
                 self.upload_file = _get_underlying_file(
                     self.upload_field_storage)
@@ -261,26 +268,30 @@ class Upload(object):
 
     def delete(self, filename: str) -> None:
         ''' Delete file we are pointing at'''
-        if not filename.startswith('http'):
+        if self.storage_path and not filename.startswith('http'):
             try:
                 # Delete file from storage_path and filename
-                os.remove(os.path.join(self.storage_path, filename))
+                os.remove(self._get_storage_path_for(filename))
             except OSError:
                 pass
 
     def download(self, filename: str) -> Response:
         ''' Generate file stream or redirect for file'''
-        filepath = os.path.join(self.storage_path, filename)
+        if not self.storage_path:
+            return base.abort(404, "Uploaded resource not found")
+        filepath = self._get_storage_path_for(filename)
         resp = flask.send_file(filepath)
-        content_type, content_enc = mimetypes.guess_type(filepath)
+        content_type, _ = mimetypes.guess_type(filepath)
         _add_download_headers(filepath, content_type, resp)
         return resp
 
     def metadata(self, filename: str) -> Union[dict[str, Any], IOError]:
         ''' Return metadata of file'''
+        if not self.storage_path:
+            return {}
         try:
-            filepath = os.path.join(self.storage_path, filename)
-            content_type, content_encoding = mimetypes.guess_type(filepath)
+            filepath = self._get_storage_path_for(filename)
+            content_type, _ = mimetypes.guess_type(filepath)
             hash, length = _file_hashnlength(filepath)
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:
@@ -290,6 +301,7 @@ class Upload(object):
 
 class ResourceUpload(object):
     mimetype: Optional[str]
+    url: Optional[str]
 
     def __init__(self, resource: dict[str, Any]) -> None:
         path = get_storage_path()
@@ -352,7 +364,7 @@ class ResourceUpload(object):
 
     def get_directory(self, id: str) -> str:
         assert self.storage_path
-        directory = os.path.join(self.storage_path,
+        directory = os.path.join(self.storage_path or '',
                                  id[0:3], id[3:6])
         return directory
 
@@ -437,8 +449,10 @@ class ResourceUpload(object):
             filepath = self.get_path(id)
             if self.mimetype:
                 content_type = self.mimetype
+            elif self.url:
+                content_type = mimetypes.guess_type(self.url or '')[0]
             else:
-                content_type = mimetypes.guess_type(self.url)[0]
+                raise IOError("No resource URL found")
             hash, length = _file_hashnlength(filepath)
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:

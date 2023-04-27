@@ -263,6 +263,7 @@ def package_update(
     name_or_id = data_dict.get('id') or data_dict.get('name')
     if name_or_id is None:
         raise ValidationError({'id': _('Missing value')})
+    resources_only = data_dict.pop('resources_only', False)
 
     pkg = model.Package.get(name_or_id)
     if pkg is None:
@@ -317,7 +318,7 @@ def package_update(
         model.Session.rollback()
         raise ValidationError(errors)
 
-    if not context.get('resources_only', False):
+    if not resources_only:
         #avoid revisioning by updating directly
         model.Session.query(model.Package).filter_by(id=pkg.id).update(
             {"metadata_modified": datetime.datetime.utcnow()})
@@ -575,7 +576,7 @@ def package_resource_reorder(
     new_resources = ordered_resources + existing_resources
     package_dict['resources'] = new_resources
 
-    context['resources_only'] = True
+    package_dict['resources_only'] = True
     _check_access('package_resource_reorder', context, package_dict)
     _get_action('package_update')(context, package_dict)
 

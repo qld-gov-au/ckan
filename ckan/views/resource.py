@@ -170,12 +170,13 @@ def download(package_type: str,
 
     if rsc.get(u'url_type') == u'upload':
         upload = uploader.get_resource_uploader(rsc)
+        # Don't break if old plugin/interface is found
         if hasattr(upload, 'download'):
             try:
-                resp = upload.download(resource_id, filename)
+                resp = upload.download(resource_id, filename)  # type: ignore
             except (IOError, OSError):
                 # includes FileNotFoundError
-                return h.abort(404, _('Resource data not found'))
+                return base.abort(404, _('Resource data not found'))
         else:
             filepath = upload.get_path(rsc[u'id'])
             resp = flask.send_file(filepath, download_name=filename)

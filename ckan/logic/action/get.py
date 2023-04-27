@@ -1197,15 +1197,14 @@ def resource_file_metadata_show(
     id = _get_or_bust(data_dict, 'id')
 
     resource = model.Resource.get(id)
-    resource_context = dict(context, resource=resource)
-
     if not resource:
         raise NotFound
+    context['resource'] = resource
 
-    _check_access('resource_file_metadata_show', resource_context, data_dict)
+    _check_access('resource_file_metadata_show', context, data_dict)
 
     pkg_dict = logic.get_action('package_show')(
-        dict(context),
+        context,
         {'id': resource.package.id,
          'include_tracking': asbool(data_dict.get('include_tracking', False))})
 
@@ -1218,8 +1217,8 @@ def resource_file_metadata_show(
 
     upload = uploader.get_resource_uploader(resource_dict)
     try:
-        return upload.metadata(id)
-    except IOError:
+        return upload.metadata(id)  # type: ignore
+    except (IOError, AttributeError):
         raise NotFound
 
 

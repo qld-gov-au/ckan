@@ -13,6 +13,7 @@ from typing import Any, IO, Optional, Union
 from urllib.parse import urlparse
 
 from werkzeug.datastructures import FileStorage as FlaskFileStorage
+from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 from ckan import logic, plugins
 from ckan.common import config
@@ -115,7 +116,7 @@ def _file_hashnlength(local_path: str) -> tuple[str, int]:
 
 def _add_download_headers(file_path: str,
                           mime_type: Optional[str],
-                          response: Response) -> None:
+                          response: Union[Response, WerkzeugResponse]) -> None:
     """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
     to a a file download.
     """
@@ -173,7 +174,7 @@ class Upload(object):
         Storage path must be configured.
         '''
         assert self.storage_path
-        return os.path.join(self.storage_path or '', filename)
+        return os.path.join(self.storage_path, filename)
 
     def update_data_dict(self, data_dict: dict[str, Any], url_field: str,
                          file_field: str, clear_field: str) -> None:
@@ -275,7 +276,7 @@ class Upload(object):
             except OSError:
                 pass
 
-    def download(self, filename: str) -> Response:
+    def download(self, filename: str) -> Union[Response, WerkzeugResponse]:
         ''' Generate file stream or redirect for file'''
         if not self.storage_path:
             return base.abort(404, "Uploaded resource not found")
@@ -364,7 +365,7 @@ class ResourceUpload(object):
 
     def get_directory(self, id: str) -> str:
         assert self.storage_path
-        real_storage = os.path.realpath(self.storage_path)
+        real_storage = os.path.realpath(self.storage_path or '')
         directory = os.path.join(real_storage, id[0:3], id[3:6])
         if directory != os.path.realpath(directory):
             raise logic.ValidationError({'upload': ['Invalid storage directory']})
@@ -439,7 +440,8 @@ class ResourceUpload(object):
         except OSError:
             pass
 
-    def download(self, id: str, filename: Optional[str] = None) -> Response:
+    def download(self, id: str, filename: Optional[str] = None
+                 ) -> Union[Response, WerkzeugResponse]:
         ''' Generate file stream or redirect for file'''
         filepath = self.get_path(id)
         resp = flask.send_file(filepath)
@@ -456,7 +458,7 @@ class ResourceUpload(object):
             if self.mimetype:
                 content_type = self.mimetype
             elif self.url:
-                content_type = mimetypes.guess_type(self.url or '')[0]
+                content_type = mimetypes.guess_type(self.url)[0]
             else:
                 raise IOError("No resource URL found")
             hash, length = _file_hashnlength(filepath)

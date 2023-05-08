@@ -298,6 +298,11 @@ class ResourceUpload(object):
     def get_path(self, id):
         directory = self.get_directory(id)
         filepath = os.path.join(directory, id[6:])
+
+        if not os.path.realpath(filepath).startswith(self.storage_path):
+            err = {'upload': ['Invalid storage path']}
+            raise logic.ValidationError(err)
+
         return filepath
 
     def upload(self, id, max_size=10):

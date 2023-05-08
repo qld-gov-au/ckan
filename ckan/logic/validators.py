@@ -230,6 +230,16 @@ def resource_id_exists(value, context):
     return value
 
 
+def resource_id_validator(value):
+    pat = re.compile("[\\/.]")
+
+    if pat.search(value):
+        raise Invalid(_('Invalid characters in resource id'))
+    if len(value) > 100:
+        raise Invalid(_('Invalid lenght for resource id'))
+    return value
+
+
 def user_id_exists(user_id, context):
     '''Raises Invalid if the given user_id does not exist in the model given
     in the context, otherwise returns the given user_id.

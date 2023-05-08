@@ -395,6 +395,30 @@ class TestResourceCreate:
         with pytest.raises(logic.ValidationError):
             helpers.call_action("resource_create", **data_dict)
 
+    def test_invalid_characters_in_id(self):
+
+        data_dict = {
+            "id": "../../nope.txt",
+            "package_id": factories.Dataset()["id"],
+            "url": "http://data",
+            "name": "A nice resource",
+        }
+
+        with pytest.raises(logic.ValidationError):
+            helpers.call_action("resource_create", **data_dict)
+
+    def test_id_too_long(self):
+
+        data_dict = {
+            "id": "x" * 111,
+            "package_id": factories.Dataset()["id"],
+            "url": "http://data",
+            "name": "A nice resource",
+        }
+
+        with pytest.raises(logic.ValidationError):
+            helpers.call_action("resource_create", **data_dict)
+
     def test_doesnt_require_url(self):
         dataset = factories.Dataset()
         data_dict = {"package_id": dataset["id"]}

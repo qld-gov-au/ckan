@@ -304,6 +304,12 @@ def resource_create(context, data_dict):
 
     upload = uploader.get_resource_uploader(data_dict)
 
+    if 'id' in data_dict:
+        try:
+            logic.validators.resource_id_validator(data_dict['id'])
+        except ckan.lib.navl.dictization_functions.Invalid as e:
+            raise ValidationError(str(e))
+
     if 'mimetype' not in data_dict:
         if hasattr(upload, 'mimetype'):
             data_dict['mimetype'] = upload.mimetype

@@ -291,17 +291,18 @@ class ResourceUpload(object):
             resource['url_type'] = ''
 
     def get_directory(self, id):
-        directory = os.path.join(self.storage_path,
-                                 id[0:3], id[3:6])
+        real_storage = os.path.realpath(self.storage_path)
+        directory = os.path.join(real_storage, id[0:3], id[3:6])
+        if directory != os.path.realpath(directory):
+            raise logic.ValidationError({'upload': ['Invalid storage directory']})
         return directory
 
     def get_path(self, id):
         directory = self.get_directory(id)
         filepath = os.path.join(directory, id[6:])
 
-        if not os.path.realpath(filepath).startswith(self.storage_path):
-            err = {'upload': ['Invalid storage path']}
-            raise logic.ValidationError(err)
+        if filepath != os.path.realpath(filepath):
+            raise logic.ValidationError({'upload': ['Invalid storage path']})
 
         return filepath
 

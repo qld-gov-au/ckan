@@ -30,8 +30,6 @@ StopOnError = df.StopOnError
 Missing = df.Missing
 missing = df.missing
 
-invalid_resource_id_pattern = re.compile("[^0-9a-zA-Z _-]")
-
 
 def owner_org_validator(key, data, errors, context):
 
@@ -233,9 +231,9 @@ def resource_id_exists(value, context):
 
 
 def resource_id_validator(value):
-
-    if invalid_resource_id_pattern.search(value):
-        raise Invalid(_('Invalid resource id'))
+    pattern = re.compile("[^0-9a-zA-Z _-]")
+    if pattern.search(value):
+        raise Invalid(_('Invalid characters in resource id'))
     if len(value) < 7 or len(value) > 100:
         raise Invalid(_('Invalid length for resource id'))
     return value

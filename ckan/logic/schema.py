@@ -29,9 +29,9 @@ def validator_args(fn):
 def default_resource_schema(
         ignore_empty, unicode_safe, ignore, ignore_missing,
         remove_whitespace, if_empty_guess_format, clean_format, isodate,
-        int_validator, extras_valid_json, keep_extras):
+        int_validator, extras_valid_json, keep_extras, resource_id_validator):
     return {
-        'id': [ignore_empty, unicode_safe],
+        'id': [ignore_empty, resource_id_validator, unicode_safe],
         'package_id': [ignore],
         'url': [ignore_missing, unicode_safe, remove_whitespace],
         'description': [ignore_missing, unicode_safe],

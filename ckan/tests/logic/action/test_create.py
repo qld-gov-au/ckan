@@ -419,6 +419,18 @@ class TestResourceCreate:
         with pytest.raises(logic.ValidationError):
             helpers.call_action("resource_create", **data_dict)
 
+    def test_id_already_exists(self):
+        data_dict = {
+            'id': 'wont-be-fooled-again',
+            'package_id': factories.Dataset()['id'],
+        }
+        helpers.call_action('resource_create', **data_dict)
+
+        data_dict['package_id'] = factories.Dataset()['id']
+
+        with pytest.raises(logic.ValidationError):
+            helpers.call_action('resource_create', **data_dict)
+
     def test_doesnt_require_url(self):
         dataset = factories.Dataset()
         data_dict = {"package_id": dataset["id"]}

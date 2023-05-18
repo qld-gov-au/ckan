@@ -15,7 +15,7 @@ v.2.9.9 2023-05-24
 Bugfixes
 --------
 
-- `CVE-2023-32321 <https://github.com/ckan/ckan/security/advisories/GHSA-446m-hmmm-hm8m>`_: fix potential path traversal, information disclosure and DOS vulnerabilities via crafted resource ids.
+- `CVE-2023-32321 <https://github.com/ckan/ckan/security/advisories/GHSA-446m-hmmm-hm8m>`_: fix potential path traversal, remote code execution, information disclosure and DOS vulnerabilities via crafted resource ids.
 
 Migration notes
 ---------------

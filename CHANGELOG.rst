@@ -18,6 +18,30 @@ Major features
 - Update to Interface IUploader, on get_uploader and get_resource_uploader, new to include new method signature metadata() which can be utilised by archiver and other plugins instead of trying on local disk directly
 - Add get api `resource_file_metadata_show` which takes resource id and returns { 'content_type': content_type, 'size': length, 'hash': hash } if found
 
+v.2.9.9 2023-05-24
+==================
+
+Bugfixes
+--------
+
+- `CVE-2023-32321 <https://github.com/ckan/ckan/security/advisories/GHSA-446m-hmmm-hm8m>`_: fix potential path traversal, remote code execution, information disclosure and DOS vulnerabilities via crafted resource ids.
+
+Migration notes
+---------------
+- The default storage backend for the session data used by the Beaker library uses the Python ``pickle`` module, which is considered unsafe. While there is no direct vulnerability known using this vector, a safer alternative is to store the session data in the `client-side cookie <https://beaker.readthedocs.io/en/latest/sessions.html#cookie-based>`_. This will probably
+  be the default behaviour in future CKAN versions::
+
+	# ckan.ini
+	beaker.session.type = cookie
+    beaker.session.data_serializer = json
+	beaker.session.validate_key = CHANGE_ME
+
+	beaker.session.httponly = True
+	beaker.session.secure = True
+	beaker.session.samesite = Lax
+    # or Strict, depending on your setup
+
+
 v.2.9.8 2023-02-15
 ==================
 

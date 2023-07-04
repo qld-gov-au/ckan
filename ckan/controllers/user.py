@@ -449,6 +449,13 @@ class UserController(base.BaseController):
             abort(403, _('Unauthorized to request reset password.'))
 
         if request.method == 'POST':
+            try:
+                captcha.check_recaptcha(request)
+            except captcha.CaptchaError:
+                error_msg = _(u'Bad Captcha. Please try again.')
+                h.flash_error(error_msg)
+                return render('user/request_reset.html')
+
             id = request.params.get('user')
             if id in (None, u''):
                 h.flash_error(_(u'Email is required'))
@@ -529,6 +536,14 @@ class UserController(base.BaseController):
             abort(403)
 
         if request.method == 'POST':
+            try:
+                captcha.check_recaptcha(request)
+            except captcha.CaptchaError:
+                error_msg = _(u'Bad Captcha. Please try again.')
+                h.flash_error(error_msg)
+                c.user_dict = user_dict
+                return render('user/perform_reset.html')
+
             try:
                 context['reset_password'] = True
                 user_state = user_dict['state']

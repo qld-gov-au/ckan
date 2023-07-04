@@ -24,6 +24,11 @@
           {% endif %}
           {{ form.input("password1", id="field-password", label=_("Password"), type="password", value='', error='', attrs={'autocomplete': 'no', 'class': 'form-control control-medium'}, classes=["form-group"]) }}
           {{ form.input("password2", id="field-confirm-password", label=_("Confirm"), type="password", value='', error='', attrs={'autocomplete': 'no', 'class': 'form-control control-medium'}, classes=["form-group"]) }}
+
+          {% if g.recaptcha_publickey %}
+            {% snippet "user/snippets/recaptcha.html", public_key=g.recaptcha_publickey %}
+          {% endif %}
+
           <div class="form-actions">
             {% block form_button %}
             <button class="btn btn-primary" type="submit" name="save">{{ _("Update Password") }}</button>

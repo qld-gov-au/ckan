@@ -9,7 +9,8 @@ TIMEOUT = asint(config.get('ckan.requests.timeout', 5))
 
 def check_recaptcha(request):
     '''Check a user\'s recaptcha submission is valid, and raise CaptchaError
-    on failure.'''
+        on failure.'''
+    #Early exit if privatekey is not set
     recaptcha_private_key = config.get('ckan.recaptcha.privatekey', '')
     if not recaptcha_private_key:
         # Recaptcha not enabled
@@ -17,9 +18,18 @@ def check_recaptcha(request):
 
     client_ip_address = request.environ.get(
         'REMOTE_ADDR', 'Unknown IP Address')
+    recaptcha_response_field = request.form.get('g-recaptcha-response', '')
+    check_recaptcha_v2_base(client_ip_address, recaptcha_response_field)
+
+def check_recaptcha_v2_base(client_ip_address, recaptcha_response_field):
+    '''Check a user\'s recaptcha submission is valid, and raise CaptchaError
+    on failure using discreet data'''
+    recaptcha_private_key = config.get('ckan.recaptcha.privatekey', '')
+    if not recaptcha_private_key:
+        # Recaptcha not enabled
+        return
 
     # reCAPTCHA v2
-    recaptcha_response_field = request.form.get('g-recaptcha-response', '')
     recaptcha_server_name = 'https://www.google.com/recaptcha/api/siteverify'
 
     # recaptcha_response_field will be unicode if there are foreign chars in

@@ -449,12 +449,13 @@ class UserController(base.BaseController):
             abort(403, _('Unauthorized to request reset password.'))
 
         if request.method == 'POST':
+            #this path does not seem to be used in 2.9
             try:
                 captcha.check_recaptcha(request)
             except captcha.CaptchaError:
                 error_msg = _(u'Bad Captcha. Please try again.')
                 h.flash_error(error_msg)
-                return render('user/request_reset.html')
+                return h.redirect_to(u'/user/reset')
 
             id = request.params.get('user')
             if id in (None, u''):
@@ -536,14 +537,6 @@ class UserController(base.BaseController):
             abort(403)
 
         if request.method == 'POST':
-            try:
-                captcha.check_recaptcha(request)
-            except captcha.CaptchaError:
-                error_msg = _(u'Bad Captcha. Please try again.')
-                h.flash_error(error_msg)
-                c.user_dict = user_dict
-                return render('user/perform_reset.html')
-
             try:
                 context['reset_password'] = True
                 user_state = user_dict['state']

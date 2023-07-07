@@ -449,6 +449,14 @@ class UserController(base.BaseController):
             abort(403, _('Unauthorized to request reset password.'))
 
         if request.method == 'POST':
+            #this path does not seem to be used in 2.9
+            try:
+                captcha.check_recaptcha(request)
+            except captcha.CaptchaError:
+                error_msg = _(u'Bad Captcha. Please try again.')
+                h.flash_error(error_msg)
+                return h.redirect_to(u'/user/reset')
+
             id = request.params.get('user')
             if id in (None, u''):
                 h.flash_error(_(u'Email is required'))

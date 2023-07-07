@@ -26,6 +26,8 @@
 
 u'''Collection of :mod:`repoze.who` friendly forms'''
 
+import logging
+import ckan.lib.captcha as captcha
 from six.moves.urllib.parse import urlparse, urlunparse, urlencode, parse_qs
 
 from webob import Request
@@ -40,12 +42,14 @@ from zope.interface import implementer
 from repoze.who.interfaces import IChallenger, IIdentifier
 
 __all__ = [u'FriendlyFormPlugin']
+log = logging.getLogger(__name__)
 
 
 def construct_url(environ):
     return Request(environ).url
 
 
+##In CKAN 2.10+ repoze.who is going away.
 @implementer(IChallenger, IIdentifier)
 class FriendlyFormPlugin(object):
     u'''
@@ -163,6 +167,16 @@ class FriendlyFormPlugin(object):
                 credentials[u'max_age'] = form[u'remember']
             except KeyError:
                 pass
+
+            # Add recaptcha details on Authentication to environ['captchaFailed'].
+            try:
+                client_ip_address = environ.get('REMOTE_ADDR', 'Unknown IP Address')
+                recaptcha_response_field = form.get('g-recaptcha-response', '')
+                captcha.check_recaptcha_v2_base(client_ip_address, recaptcha_response_field)
+            except captcha.CaptchaError:
+                log.warn('Login failed - username %r failed recaptcha', login)
+                environ[u'captchaFailed'] = True
+                credentials = None
 
             referer = environ.get(u'HTTP_REFERER', script_name)
             destination = form.get(u'came_from', referer)

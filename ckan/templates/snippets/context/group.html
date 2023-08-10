@@ -1,7 +1,7 @@
 <div class="context-info">
   {% if description != 'null' %}
     {% set description = description|striptags %}
-    <p class="about">
+    <p class="about" title="{{ description }}">
       {{ h.truncate(description, length=160, whole_word=True) }}
     </p>
   {% endif %}

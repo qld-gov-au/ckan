@@ -1820,16 +1820,19 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         select_cols = []
         records_format = data_dict.get(u'records_format')
         for field_id in field_ids:
-            fmt = u'to_json({0})' if records_format == u'lists' else u'{0}'
+            if records_format == u'lists':
+                fmt = u"coalesce(to_json({0}), 'null')"
+            else:
+                fmt = u'{0}'
             typ = fields_types.get(field_id)
             if typ == u'nested':
-                fmt = u'({0}).json'
+                fmt = u"coalesce(({0}).json, 'null')"
             elif typ == u'timestamp':
                 fmt = u"to_char({0}, 'YYYY-MM-DD\"T\"HH24:MI:SS')"
                 if records_format == u'lists':
-                    fmt = u"to_json({0})".format(fmt)
+                    fmt = u"coalesce(to_json({0}), 'null')".format(fmt)
             elif typ.startswith(u'_') or typ.endswith(u'[]'):
-                fmt = u'array_to_json({0})'
+                fmt = u"coalesce(array_to_json({0}), 'null')"
 
             if field_id in rank_columns:
                 select_cols.append((fmt + ' as {1}').format(

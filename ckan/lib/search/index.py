@@ -216,15 +216,15 @@ class PackageSearchIndex(SearchIndex):
         subjects = pkg_dict.pop("relationships_as_subject", [])
         objects = pkg_dict.pop("relationships_as_object", [])
         for rel in objects:
-            type = model.PackageRelationship.forward_to_reverse_type(rel['type'])
+            rel_type = model.PackageRelationship.forward_to_reverse_type(rel['type'])
             pkg = model.Package.get(rel['subject_package_id'])
             assert pkg
-            rel_dict[type].append(pkg.name)
+            rel_dict[rel_type].append(pkg.name)
         for rel in subjects:
-            type = rel['type']
+            rel_type = rel['type']
             pkg = model.Package.get(rel['object_package_id'])
             assert pkg
-            rel_dict[type].append(pkg.name)
+            rel_dict[rel_type].append(pkg.name)
         for key, value in rel_dict.items():
             if key not in pkg_dict:
                 pkg_dict[key] = value

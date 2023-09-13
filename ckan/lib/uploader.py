@@ -175,7 +175,7 @@ class Upload(object):
         Storage path must be configured.
         '''
         assert self.storage_path
-        return os.path.join(self.storage_path, six.ensure_string(filename))
+        return os.path.join(self.storage_path, six.ensure_str(filename))
 
     def update_data_dict(self, data_dict: dict[str, Any], url_field: str,
                          file_field: str, clear_field: str) -> None:

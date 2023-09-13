@@ -216,15 +216,15 @@ class PackageSearchIndex(SearchIndex):
         subjects = pkg_dict.pop("relationships_as_subject", [])
         objects = pkg_dict.pop("relationships_as_object", [])
         for rel in objects:
-            type = model.PackageRelationship.forward_to_reverse_type(rel['type'])
+            rel_type = model.PackageRelationship.forward_to_reverse_type(rel['type'])
             pkg = model.Package.get(rel['subject_package_id'])
             assert pkg
-            rel_dict[type].append(pkg.name)
+            rel_dict[rel_type].append(pkg.name)
         for rel in subjects:
-            type = rel['type']
+            rel_type = rel['type']
             pkg = model.Package.get(rel['object_package_id'])
             assert pkg
-            rel_dict[type].append(pkg.name)
+            rel_dict[rel_type].append(pkg.name)
         for key, value in rel_dict.items():
             if key not in pkg_dict:
                 pkg_dict[key] = value
@@ -255,6 +255,9 @@ class PackageSearchIndex(SearchIndex):
                 except (IndexError, TypeError, ValueError):
                     log.error('%r: %r value of %r is not a valid date', pkg_dict['id'], key, value)
                     continue
+            if type(value) is dict:
+                # Solr 8+ chokes on passing dict values unless doing an atomic update
+                value = str(value)
             new_dict[key] = value
         pkg_dict = new_dict
 

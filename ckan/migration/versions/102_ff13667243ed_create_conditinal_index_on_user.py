@@ -24,6 +24,7 @@ def upgrade():
             "idx_only_one_active_email", "user", ["email", "state"],
             unique=True, postgresql_where=sa.text('"user".state=\'active\''))
     except sa.exc.IntegrityError:
+        print("Unable to enforce unique emails. Please review your accounts.")
         op.create_index(
             "idx_only_one_active_email", "user", ["email", "state"],
             unique=False, postgresql_where=sa.text('"user".state=\'active\''))

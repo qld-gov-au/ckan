@@ -128,6 +128,7 @@ sqlalchemy[mypy]==1.4.41
     # via
     #   -r requirements.in
     #   alembic
+    #   sqlalchemy
 sqlalchemy2-stubs==0.0.2a27
     # via sqlalchemy
 sqlparse==0.4.2
@@ -143,7 +144,7 @@ tzdata==2022.1
     # via pytz-deprecation-shim
 tzlocal==4.2
     # via -r requirements.in
-urllib3==1.26.9
+urllib3==1.26.18
     # via requests
 watchdog==2.1.6
     # via werkzeug
@@ -156,6 +157,7 @@ werkzeug[watchdog]==2.0.3
     #   -r requirements.in
     #   flask
     #   flask-login
+    #   werkzeug
 wrapt==1.14.0
     # via deprecated
 wtforms==3.0.1

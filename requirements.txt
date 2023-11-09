@@ -16,7 +16,7 @@ bleach==5.0.1
     # via -r requirements.in
 blinker==1.5
     # via -r requirements.in
-certifi==2021.10.8
+certifi==2023.7.22
     # via requests
 charset-normalizer==2.0.12
     # via requests

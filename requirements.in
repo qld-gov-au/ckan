@@ -29,7 +29,7 @@ requests==2.31.0
 rq==1.11.0
 simplejson==3.17.6
 SQLAlchemy[mypy]==1.4.41
-sqlparse==0.4.2
+sqlparse==0.4.4
 typing_extensions==4.3.0
 tzlocal==4.2
 webassets==2.0

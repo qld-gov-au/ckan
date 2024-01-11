@@ -20,7 +20,7 @@ flask==1.1.1              # via -r requirements.in, flask-babel, flask-multistat
 funcsigs==1.0.2           # via beaker
 idna==2.10                # via requests
 itsdangerous==1.1.0       # via flask
-jinja2==2.10.1            # via -r requirements.in, flask, flask-babel
+jinja2==3.1.3            # via -r requirements.in, flask, flask-babel
 lxml==4.6.3               # via feedgen
 mako==1.1.5               # via alembic
 markdown==2.6.7           # via -r requirements.in

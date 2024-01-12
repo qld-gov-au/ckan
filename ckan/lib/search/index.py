@@ -248,6 +248,9 @@ class PackageSearchIndex(SearchIndex):
                 except DateParserError:
                     log.warning('%r: %r value of %r is not a valid date', pkg_dict['id'], key, value)
                     continue
+            if type(value) is dict:
+                # Solr 8+ chokes on passing dict values unless doing an atomic update
+                value = str(value)
             new_dict[key] = value
 
         pkg_dict = new_dict

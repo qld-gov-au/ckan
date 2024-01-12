@@ -645,6 +645,14 @@ class RequestResetView(MethodView):
 
     def post(self) -> Response:
         self._prepare()
+
+        try:
+            captcha.check_recaptcha(request)
+        except captcha.CaptchaError:
+            error_msg = _(u'Bad Captcha. Please try again.')
+            h.flash_error(error_msg)
+            return h.redirect_to(u'/user/reset')
+
         id = request.form.get(u'user', '')
         if id in (None, u''):
             h.flash_error(_(u'Email is required'))

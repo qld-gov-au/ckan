@@ -645,6 +645,14 @@ class RequestResetView(MethodView):
 
     def post(self) -> Response:
         self._prepare()
+
+        try:
+            captcha.check_recaptcha(request)
+        except captcha.CaptchaError:
+            error_msg = _(u'Bad Captcha. Please try again.')
+            h.flash_error(error_msg)
+            return h.redirect_to(u'/user/reset')
+
         id = request.form.get(u'user', '')
         if id in (None, u''):
             h.flash_error(_(u'Email is required'))
@@ -935,7 +943,7 @@ user.add_url_rule(
     u'/register', view_func=RegisterView.as_view(str(u'register')))
 
 user.add_url_rule(u'/login', view_func=login, methods=('GET', 'POST'))
-user.add_url_rule(u'/_logout', view_func=logout)
+user.add_url_rule(u'/_logout', view_func=logout, methods=('GET', 'POST'))
 user.add_url_rule(u'/logged_out_redirect', view_func=logged_out_page)
 
 user.add_url_rule(u'/delete/<id>', view_func=delete, methods=(u'POST', 'GET'))

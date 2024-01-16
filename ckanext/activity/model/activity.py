@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, Optional, Type, TypeVar, cast
+from typing import Any, Optional, Type, TypeVar, Union, List, Tuple, cast
 from typing_extensions import TypeAlias
 
 from sqlalchemy.orm import relationship, backref
@@ -14,6 +14,8 @@ from sqlalchemy import (
     and_,
     union_all,
     text,
+    select,
+    literal,
 )
 
 from ckan.common import config
@@ -202,16 +204,16 @@ def _activities_limit(
     q: QActivity,
     limit: int,
     offset: Optional[int] = None,
-    revese_order: Optional[bool] = False,
+    reverse_order: Optional[bool] = False,
 ) -> QActivity:
     """
     Return an SQLAlchemy query for all activities at an offset with a limit.
 
-    revese_order:
+    reverse_order:
         if we want the last activities before a date, we must reverse the
         order before limiting.
     """
-    if revese_order:
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -237,21 +239,22 @@ def _activities_union_all(*qlist: QActivity) -> QActivity:
     return q
 
 
-def _activities_from_user_query(user_id: str) -> QActivity:
+def _activities_from_user_query(user_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities from user_id."""
     q = model.Session.query(Activity)
-    q = q.filter(Activity.user_id == user_id)
+    q = q.filter(Activity.user_id.in_(_to_list(user_id)))  # type: ignore
     return q
 
 
-def _activities_about_user_query(user_id: str) -> QActivity:
+def _activities_about_user_query(user_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities about user_id."""
     q = model.Session.query(Activity)
-    q = q.filter(Activity.object_id == user_id)
+    q = q.filter(Activity.object_id.in_(_to_list(user_id)))  # type: ignore
     return q
 
 
-def _user_activity_query(user_id: str, limit: int) -> QActivity:
+def _user_activity_query(
+        user_id: Union[str, List[str]], limit: int) -> QActivity:
     """Return an SQLAlchemy query for all activities from or about user_id."""
     q1 = _activities_limit(_activities_from_user_query(user_id), limit)
     q2 = _activities_limit(_activities_about_user_query(user_id), limit)
@@ -288,8 +291,8 @@ def user_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -303,15 +306,22 @@ def user_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
 
 
-def _package_activity_query(package_id: str) -> QActivity:
+def _to_list(vals: Union[List[str], Tuple[str], str]):
+    if isinstance(vals, (list, tuple)):
+        return vals
+    return [vals]
+
+
+def _package_activity_query(package_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities about package_id."""
-    q = model.Session.query(Activity).filter_by(object_id=package_id)
+    q = model.Session.query(Activity).filter(
+        Activity.object_id.in_(_to_list(package_id)))  # type: ignore
     return q
 
 
@@ -355,8 +365,8 @@ def package_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -370,24 +380,21 @@ def package_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
 
 
-def _group_activity_query(group_id: str) -> QActivity:
+def _group_activity_query(group_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities about group_id.
 
     Returns a query for all activities whose object is either the group itself
     or one of the group's datasets.
 
     """
-    group = model.Group.get(group_id)
-    if not group:
-        # Return a query with no results.
-        return model.Session.query(Activity).filter(text("0=1"))
 
+    groups = _to_list(group_id)
     q: QActivity = (
         model.Session.query(Activity)
         .outerjoin(model.Member, Activity.object_id == model.Member.table_id)
@@ -407,20 +414,20 @@ def _group_activity_query(group_id: str) -> QActivity:
             or_(
                 # active dataset in the group
                 and_(
-                    model.Member.group_id == group_id,
+                    model.Member.group_id.in_(groups),  # type: ignore
                     model.Member.state == "active",
                     model.Package.state == "active",
                 ),
                 # deleted dataset in the group
                 and_(
-                    model.Member.group_id == group_id,
+                    model.Member.group_id.in_(groups),  # type: ignore
                     model.Member.state == "deleted",
                     model.Package.state == "deleted",
                 ),
                 # (we want to avoid showing changes to an active dataset that
                 # was once in this group)
                 # activity the the group itself
-                Activity.object_id == group_id,
+                Activity.object_id.in_(groups),  # type: ignore
             )
         )
     )
@@ -442,21 +449,27 @@ def _organization_activity_query(org_id: str) -> QActivity:
 
     q: QActivity = (
         model.Session.query(Activity)
-        .outerjoin(
-            model.Package,
-            and_(
-                model.Package.id == Activity.object_id,
-                model.Package.private == False,  # noqa
-            ),
-        )
         .filter(
             # We only care about activity either on the the org itself or on
             # packages within that org.
             # FIXME: This means that activity that occured while a package
             # belonged to a org but was then removed will not show up. This may
             # not be desired but is consistent with legacy behaviour.
-            or_(
-                model.Package.owner_org == org_id, Activity.object_id == org_id
+            #
+            # Use subselect instead of outer join so that it can all
+            # be indexable
+            Activity.object_id.in_(  # type: ignore
+                select([model.Package.id])  # type: ignore
+                .where(
+                    and_(
+                        model.Package.private == False,  # noqa
+                        model.Package.owner_org == org_id
+                    )
+                )
+                .union(
+                    # select the org itself
+                    select([literal(org_id)])
+                )
             )
         )
     )
@@ -500,8 +513,8 @@ def group_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -515,7 +528,7 @@ def group_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -556,8 +569,8 @@ def organization_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -571,7 +584,7 @@ def organization_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -588,12 +601,9 @@ def _activities_from_users_followed_by_user_query(
         # Return a query with no results.
         return model.Session.query(Activity).filter(text("0=1"))
 
-    return _activities_union_all(
-        *[
-            _user_activity_query(follower.object_id, limit)
-            for follower in follower_objects
-        ]
-    )
+    return _user_activity_query(
+        [follower.object_id for follower in follower_objects],
+        limit)
 
 
 def _activities_from_datasets_followed_by_user_query(
@@ -606,14 +616,10 @@ def _activities_from_datasets_followed_by_user_query(
         # Return a query with no results.
         return model.Session.query(Activity).filter(text("0=1"))
 
-    return _activities_union_all(
-        *[
-            _activities_limit(
-                _package_activity_query(follower.object_id), limit
-            )
-            for follower in follower_objects
-        ]
-    )
+    return _activities_limit(
+        _package_activity_query(
+            [follower.object_id for follower in follower_objects]),
+        limit)
 
 
 def _activities_from_groups_followed_by_user_query(
@@ -632,12 +638,10 @@ def _activities_from_groups_followed_by_user_query(
         # Return a query with no results.
         return model.Session.query(Activity).filter(text("0=1"))
 
-    return _activities_union_all(
-        *[
-            _activities_limit(_group_activity_query(follower.object_id), limit)
-            for follower in follower_objects
-        ]
-    )
+    return _activities_limit(
+        _group_activity_query(
+            [follower.object_id for follower in follower_objects]),
+        limit)
 
 
 def _activities_from_everything_followed_by_user_query(
@@ -698,8 +702,8 @@ def dashboard_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -713,7 +717,7 @@ def dashboard_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results

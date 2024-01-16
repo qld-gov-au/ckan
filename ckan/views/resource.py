@@ -170,11 +170,19 @@ def download(package_type: str,
 
     if rsc.get(u'url_type') == u'upload':
         upload = uploader.get_resource_uploader(rsc)
-        filepath = upload.get_path(rsc[u'id'])
-        resp = flask.send_file(filepath, download_name=filename)
+        # Don't break if old plugin/interface is found
+        if hasattr(upload, 'download'):
+            try:
+                resp = upload.download(resource_id, filename)  # type: ignore
+            except (IOError, OSError):
+                # includes FileNotFoundError
+                return base.abort(404, _('Resource data not found'))
+        else:
+            filepath = upload.get_path(rsc[u'id'])
+            resp = flask.send_file(filepath, download_name=filename)
 
-        if rsc.get('mimetype'):
-            resp.headers['Content-Type'] = rsc['mimetype']
+            if rsc.get('mimetype'):
+                resp.headers['Content-Type'] = rsc['mimetype']
         signals.resource_download.send(resource_id)
         return resp
 

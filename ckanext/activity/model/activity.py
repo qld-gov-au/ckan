@@ -5,7 +5,7 @@ import datetime
 from typing import Any, Optional, Type, TypeVar, Union, List, Tuple, cast
 from typing_extensions import TypeAlias
 
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, defer, load_only
 from sqlalchemy import (
     types,
     Column,
@@ -51,7 +51,7 @@ class Activity(domain_object.DomainObject, BaseModel):  # type: ignore
     # legacy revision_id values are used by migrate_package_activity.py
     revision_id = Column("revision_id", types.UnicodeText)
     activity_type = Column("activity_type", types.UnicodeText)
-    data = Column("data", _types.JsonDictType)
+    data = Column("data", _types.JsonDictType)  # Big JSON BLOB
 
     activity_detail: "ActivityDetail"
 
@@ -226,6 +226,30 @@ def _activities_limit(
     return q
 
 
+def _activities_defer_data():
+    """
+    This function is used to defer the bulk Data Column from activity lists.
+    defer in sqlalchemy is to not collect data until requested
+    (extra-lazy-load), this can add more round trips if being looked at
+    individually
+    :return: sqlalchemy.orm.defer
+    """
+    return defer(Activity.data)
+
+
+def _activities_load_only_without_data():
+    """
+    This function is used to exclude the bulky Data Column from activity lists.
+
+    The Activity.data column will not be populated nor round trip collected
+
+    :return: sqlalchemy.orm.load_only Object
+    """
+    return load_only(Activity.id, Activity.timestamp, Activity.user_id,
+                     Activity.object_id, Activity.revision_id,
+                     Activity.activity_type)
+
+
 def _activities_union_all(*qlist: QActivity) -> QActivity:
     """
     Return union of two or more activity queries sorted by timestamp,
@@ -233,6 +257,7 @@ def _activities_union_all(*qlist: QActivity) -> QActivity:
     """
     q: QActivity = (
         model.Session.query(Activity)
+        .options(_activities_load_only_without_data())
         .select_entity_from(union_all(*[q.subquery().select() for q in qlist]))
         .distinct(Activity.timestamp)
     )
@@ -242,6 +267,7 @@ def _activities_union_all(*qlist: QActivity) -> QActivity:
 def _activities_from_user_query(user_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities from user_id."""
     q = model.Session.query(Activity)
+    q = q.options(_activities_load_only_without_data())
     q = q.filter(Activity.user_id.in_(_to_list(user_id)))  # type: ignore
     return q
 
@@ -249,6 +275,7 @@ def _activities_from_user_query(user_id: Union[str, List[str]]) -> QActivity:
 def _activities_about_user_query(user_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities about user_id."""
     q = model.Session.query(Activity)
+    q = q.options(_activities_load_only_without_data())
     q = q.filter(Activity.object_id.in_(_to_list(user_id)))  # type: ignore
     return q
 
@@ -320,8 +347,9 @@ def _to_list(vals: Union[List[str], Tuple[str], str]):
 
 def _package_activity_query(package_id: Union[str, List[str]]) -> QActivity:
     """Return an SQLAlchemy query for all activities about package_id."""
-    q = model.Session.query(Activity).filter(
-        Activity.object_id.in_(_to_list(package_id)))  # type: ignore
+    q = model.Session.query(Activity) \
+        .options(_activities_defer_data()) \
+        .filter(Activity.object_id.in_(_to_list(package_id)))  # type: ignore
     return q
 
 
@@ -396,7 +424,7 @@ def _group_activity_query(group_id: Union[str, List[str]]) -> QActivity:
 
     groups = _to_list(group_id)
     q: QActivity = (
-        model.Session.query(Activity)
+        model.Session.query(Activity).options(_activities_defer_data())
         .outerjoin(model.Member, Activity.object_id == model.Member.table_id)
         .outerjoin(
             model.Package,
@@ -445,10 +473,13 @@ def _organization_activity_query(org_id: str) -> QActivity:
     org = model.Group.get(org_id)
     if not org or not org.is_organization:
         # Return a query with no results.
-        return model.Session.query(Activity).filter(text("0=1"))
+        return model.Session.query(Activity)\
+            .options(_activities_defer_data())\
+            .filter(text("0=1"))
 
     q: QActivity = (
         model.Session.query(Activity)
+        .options(_activities_defer_data())
         .filter(
             # We only care about activity either on the the org itself or on
             # packages within that org.
@@ -599,7 +630,8 @@ def _activities_from_users_followed_by_user_query(
     follower_objects = model.UserFollowingUser.followee_list(user_id)
     if not follower_objects:
         # Return a query with no results.
-        return model.Session.query(Activity).filter(text("0=1"))
+        return model.Session.query(Activity)\
+            .options(_activities_load_only_without_data()).filter(text("0=1"))
 
     return _user_activity_query(
         [follower.object_id for follower in follower_objects],
@@ -614,7 +646,8 @@ def _activities_from_datasets_followed_by_user_query(
     follower_objects = model.UserFollowingDataset.followee_list(user_id)
     if not follower_objects:
         # Return a query with no results.
-        return model.Session.query(Activity).filter(text("0=1"))
+        return model.Session.query(Activity)\
+            .options(_activities_load_only_without_data()).filter(text("0=1"))
 
     return _activities_limit(
         _package_activity_query(
@@ -636,7 +669,8 @@ def _activities_from_groups_followed_by_user_query(
     follower_objects = model.UserFollowingGroup.followee_list(user_id)
     if not follower_objects:
         # Return a query with no results.
-        return model.Session.query(Activity).filter(text("0=1"))
+        return model.Session.query(Activity)\
+            .options(_activities_load_only_without_data()).filter(text("0=1"))
 
     return _activities_limit(
         _group_activity_query(
@@ -730,8 +764,9 @@ def _changed_packages_activity_query() -> QActivity:
     'new_package', 'changed_package', 'deleted_package'.
 
     """
-    q = model.Session.query(Activity)
-    q = q.filter(Activity.activity_type.endswith("package"))
+    q = model.Session.query(Activity) \
+        .options(_activities_defer_data()) \
+        .filter(Activity.activity_type.endswith("package"))
     return q
 
 

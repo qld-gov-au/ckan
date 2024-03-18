@@ -14,6 +14,7 @@ from typing import Any, IO, Optional, Union
 from urllib.parse import urlparse
 
 from werkzeug.datastructures import FileStorage as FlaskFileStorage
+from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 from ckan import logic, plugins
 from ckan.common import config
@@ -116,7 +117,7 @@ def _file_hashnlength(local_path: str) -> tuple[str, int]:
 
 def _add_download_headers(file_path: str,
                           mime_type: Optional[str],
-                          response: Response) -> None:
+                          response: Union[Response, WerkzeugResponse]) -> None:
     """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
     to a a file download.
     """
@@ -276,7 +277,7 @@ class Upload(object):
             except OSError:
                 pass
 
-    def download(self, filename: str) -> Response:
+    def download(self, filename: str) -> Union[Response, WerkzeugResponse]:
         ''' Generate file stream or redirect for file'''
         if not self.storage_path:
             return base.abort(404, "Uploaded resource not found")
@@ -445,7 +446,7 @@ class ResourceUpload(object):
             pass
 
     def download(self, id: str, filename: Optional[str] = None
-                 ) -> Response:
+                 ) -> Union[Response, WerkzeugResponse]:
         ''' Generate file stream or redirect for file'''
         filepath = self.get_path(id)
         resp = flask.send_file(filepath)

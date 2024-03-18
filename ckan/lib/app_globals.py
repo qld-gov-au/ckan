@@ -223,7 +223,7 @@ class _Globals(object):
         version = parse_version(self.ckan_version)
         self.ckan_base_version = version.base_version
         if not version.is_prerelease:
-            self.ckan_doc_version = f"{version.major}.{version.minor}"
+            self.ckan_doc_version = f"{version.major}.{version.minor}"  # type: ignore
         else:
             self.ckan_doc_version = "latest"
         # process the config details to set globals

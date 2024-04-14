@@ -18,7 +18,7 @@ flask-babel==1.0.0        # via -r requirements.in
 flask-multistatic==1.0    # via -r requirements.in
 flask==1.1.1              # via -r requirements.in, flask-babel, flask-multistatic
 funcsigs==1.0.2           # via beaker
-idna==2.10                # via requests
+idna==3.7                # via requests
 itsdangerous==1.1.0       # via flask
 jinja2==2.10.1            # via -r requirements.in, flask, flask-babel
 lxml==4.6.3               # via feedgen

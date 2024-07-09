@@ -164,7 +164,7 @@ wrapt==1.14.0
     # via deprecated
 wtforms==3.0.1
     # via flask-wtf
-zipp==3.7.0
+zipp==3.19.1
     # via importlib-metadata
 zope-interface==5.4.0
     # via -r requirements.in

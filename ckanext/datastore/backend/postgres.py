@@ -1973,6 +1973,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         try:
             # check if table exists
             if 'filters' not in data_dict:
+                context['connection'].execute("SET LOCAL lock_timeout = '20s'")
                 context['connection'].execute(
                     u'DROP TABLE "{0}" CASCADE'.format(
                         data_dict['resource_id'])

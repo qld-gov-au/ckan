@@ -10,7 +10,7 @@ flask-debugtoolbar==0.13.1
 freezegun==1.2.2
 ipdb==0.13.9
 pip-tools==6.8.0
-Pillow==9.2.0
+Pillow==10.3.0
 responses==0.21.0
 sphinx-rtd-theme==1.0.0
 sqlalchemy-stubs==0.4
@@ -23,3 +23,9 @@ pytest-factoryboy==2.4.0
 pytest-freezegun==0.4.2
 pytest-rerunfailures==10.2
 pytest-split==0.8.0
+requests>=2.32.2 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=2.2.2 # not directly required, pinned by Snyk to avoid a vulnerability
+werkzeug>=3.0.3 # not directly required, pinned by Snyk to avoid a vulnerability
+wheel>=0.38.0 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability

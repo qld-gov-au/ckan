@@ -20,6 +20,22 @@ Major features
   archiver and other plugins instead of trying on local disk directly
 - Add get API `resource_file_metadata_show` which takes resource ID and returns
   { 'content_type': content_type, 'size': length, 'hash': hash } if found
+- Allow sysadmins to edit usernames
+- Add reCAPTCHA checks to logins and password resets
+- Show "Displayed name" instead of "Full name"
+
+Bugfixes
+--------
+
+- Convert dict values into strings before passing to Solr
+- Add '/dataset' fallback when generating URLs
+- Avoid changing package modified timestamp when reordering resources
+- Allow legacy duplicate emails
+- Fix 'groups' vs 'organizations' text on dashboard
+- Invalidate cached pages when cookies change
+- Avoid eagerly loading large CLOB fields on activity dashboard
+- Populate activity stream notification checkbox from the account being edited, not the logged-in user
+- Shorten the lock timeout on dropping datastore tables to avoid deadlocks
 
 v.2.10.5 2024-08-21
 ===================

@@ -9,6 +9,18 @@ Changelog
 
 .. towncrier release notes start
 
+v.2.10.x 2023-xx-xx
+==================
+
+Major features
+--------------
+
+- Update to Interface IUploader, on get_uploader and get_resource_uploader,
+  new to include new method signature metadata() which can be utilised by
+  archiver and other plugins instead of trying on local disk directly
+- Add get API `resource_file_metadata_show` which takes resource ID and returns
+  { 'content_type': content_type, 'size': length, 'hash': hash } if found
+
 v.2.10.5 2024-08-21
 ===================
 

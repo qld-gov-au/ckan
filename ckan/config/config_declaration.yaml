@@ -645,6 +645,19 @@ groups:
           If False, all unauthorised requests will receive HTTP 404 Not Found.
           Default is False.
 
+      - key: ckan.auth.reveal_deleted_datasets
+        type: bool
+        default: True
+        description: |
+          Determines whether unauthorised requests for deleted datasets should have
+          the existence of the datasets revealed (True) or hidden (False).
+          This behaves similarly to ckan.auth.reveal_private_datasets; True gives
+          either HTTP 403 Forbidden (if logged in) or a redirect to the login page,
+          while False gives HTTP 404 Not Found. However, it will only take effect
+          if ckan.auth.reveal_private_datasets is already True; otherwise,
+          return HTTP 404 on unauthorised requests regardless of this value.
+          Default is True.
+
       - key: ckan.auth.enable_cookie_auth_in_api
         type: bool
         default: True

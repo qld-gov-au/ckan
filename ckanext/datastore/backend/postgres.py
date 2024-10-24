@@ -2122,6 +2122,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             meta_sql = sa.text(
                 u'SELECT count(_id) FROM "{0}"'.format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 meta_results = conn.execute(meta_sql)
             info['meta']['count'] = meta_results.fetchone()[0]  # type: ignore
 
@@ -2131,6 +2132,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 WHERE table_name = '{0}'
                 '''.format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 tabletype_results = conn.execute(tabletype_sql)
             info['meta']['table_type'] = \
                 tabletype_results.fetchone()[0]  # type: ignore
@@ -2141,6 +2143,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 WHERE matviewname = '{0}'
                 '''.format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 matview_results = conn.execute(matview_sql)
             if matview_results.fetchone()[0]:  # type: ignore
                 info['meta']['table_type'] = 'MATERIALIZED VIEW'
@@ -2149,6 +2152,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             size_sql = sa.text(
                 u"SELECT pg_relation_size('{0}')".format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 size_results = conn.execute(size_sql)
             info['meta']['size'] = size_results.fetchone()[0]  # type: ignore
 
@@ -2156,6 +2160,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             dbsize_sql = sa.text(
                 u"SELECT pg_database_size(current_database())")
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 dbsize_results = conn.execute(dbsize_sql)
             info['meta']['db_size'] = \
                 dbsize_results.fetchone()[0]  # type: ignore
@@ -2164,6 +2169,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             idxsize_sql = sa.text(
                 u"SELECT pg_indexes_size('{0}')".format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 idxsize_results = conn.execute(idxsize_sql)
             info['meta']['idx_size'] = \
                 idxsize_results.fetchone()[0]  # type: ignore
@@ -2173,6 +2179,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 SELECT name FROM "_table_metadata" WHERE alias_of = '{0}'
             '''.format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 alias_results = conn.execute(alias_sql)
             aliases = []
             for alias in alias_results.fetchall():
@@ -2211,6 +2218,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 ORDER BY c.relname,f.attnum;
             '''.format(id))
             with engine.connect() as conn:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 schema_results = conn.execute(schema_sql)
             schemainfo = {}
             for row in schema_results.fetchall():

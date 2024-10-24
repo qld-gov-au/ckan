@@ -55,6 +55,8 @@ _type_names: Set[str] = set()
 _engines: Dict[str, Engine] = {}
 
 _TIMEOUT = 60000  # milliseconds
+_LOCK_TIMEOUT = 20000
+_LOCK_TIMEOUT_SQL = u"SET LOCAL lock_timeout = {}".format(_LOCK_TIMEOUT)
 
 # See http://www.postgresql.org/docs/9.2/static/errcodes-appendix.html
 _PG_ERR_CODE = {
@@ -1580,7 +1582,7 @@ def _create_fulltext_trigger(connection: Any, resource_id: str):
 def upsert(context: Context, data_dict: dict[str, Any]):
     '''
     This method combines upsert insert and update on the datastore. The method
-    that will be used is defined in the mehtod variable.
+    that will be used is defined in the method variable.
 
     Any error results in total failure! For now pass back the actual error.
     Should be transactional.
@@ -1971,9 +1973,9 @@ class DatastorePostgresqlBackend(DatastoreBackend):
 
         trans = context['connection'].begin()
         try:
+            context['connection'].execute(_LOCK_TIMEOUT_SQL)
             # check if table exists
             if 'filters' not in data_dict:
-                context['connection'].execute("SET LOCAL lock_timeout = '20s'")
                 context['connection'].execute(
                     u'DROP TABLE "{0}" CASCADE'.format(
                         data_dict['resource_id'])
@@ -2019,6 +2021,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             # check if table already exists
             context['connection'].execute(
                 u'SET LOCAL statement_timeout TO {0}'.format(timeout))
+            context['connection'].execute(_LOCK_TIMEOUT_SQL)
             result = context['connection'].execute(
                 u'SELECT * FROM pg_tables WHERE tablename = %s',
                 data_dict['resource_id']
@@ -2253,6 +2256,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         connection = get_write_engine().connect()
         sql = 'ANALYZE "{}"'.format(resource_id)
         try:
+            connection.execute(_LOCK_TIMEOUT_SQL)
             connection.execute(sql)
         except sqlalchemy.exc.DatabaseError as err:
             raise DatastoreException(err)
@@ -2304,6 +2308,7 @@ def _write_engine_execute(sql: str):
     connection: Any = connection.execution_options(no_parameters=True)
     trans = connection.begin()
     try:
+        connection.execute(_LOCK_TIMEOUT_SQL)
         connection.execute(sql)
         trans.commit()
     except Exception:

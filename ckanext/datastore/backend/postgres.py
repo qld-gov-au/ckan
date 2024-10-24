@@ -2,7 +2,6 @@
 from __future__ import annotations
 from typing_extensions import TypeAlias
 
-import sqlalchemy.exc
 from sqlalchemy.engine.base import Engine
 from ckan.types import Context, ErrorDict
 import copy
@@ -11,7 +10,7 @@ import sys
 from typing import (
     Any, Callable, Container, Dict, Iterable, Optional, Set, Union,
     cast)
-import sqlalchemy
+import sqlalchemy as sa
 import os
 import pprint
 import sqlalchemy.engine.url as sa_url
@@ -36,7 +35,7 @@ import ckanext.datastore.interfaces as interfaces
 from psycopg2.extras import register_default_json, register_composite
 import distutils.version
 from sqlalchemy.exc import (ProgrammingError, IntegrityError,
-                            DBAPIError, DataError)
+                            DBAPIError, DataError, DatabaseError)
 
 import ckan.plugins as plugins
 from ckan.common import CKANConfig, config
@@ -129,9 +128,9 @@ def _get_engine_from_url(connection_url: str, **kwargs: Any) -> Engine:
         config.setdefault('ckan.datastore.sqlalchemy.pool_pre_ping', True)
         for key, value in kwargs.items():
             config.setdefault(key, value)
-        engine = sqlalchemy.engine_from_config(config,
-                                               'ckan.datastore.sqlalchemy.',
-                                               **extras)
+        engine = sa.engine_from_config(config,
+                                       'ckan.datastore.sqlalchemy.',
+                                       **extras)
         _engines[connection_url] = engine
 
     # don't automatically convert to python objects
@@ -268,15 +267,17 @@ def _get_unique_key(context: Context, data_dict: dict[str, Any]) -> list[str]:
         AND idx.indisprimary = false
         AND t.relname = %s
     '''
-    key_parts = context['connection'].execute(sql_get_unique_key,
-                                              data_dict['resource_id'])
+    key_parts = context['connection'].execute(
+        sql_get_unique_key,
+        data_dict['resource_id']
+    )
     return [x[0] for x in key_parts]
 
 
 def _get_field_info(connection: Any, resource_id: str) -> dict[str, Any]:
     u'''return a dictionary mapping column names to their info data,
     when present'''
-    qtext = sqlalchemy.text(u'''
+    qtext = sa.text(u'''
         select pa.attname as name, pd.description as info
         from pg_class pc, pg_attribute pa, pg_description pd
         where pa.attrelid = pc.oid and pd.objoid = pc.oid
@@ -588,7 +589,7 @@ def _ts_query_alias(field: Optional[str] = None):
 def _get_aliases(context: Context, data_dict: dict[str, Any]):
     '''Get a list of aliases for a resource.'''
     res_id = data_dict['resource_id']
-    alias_sql = sqlalchemy.text(
+    alias_sql = sa.text(
         u'SELECT name FROM "_table_metadata" WHERE alias_of = :id')
     results = context['connection'].execute(alias_sql, id=res_id).fetchall()
     return [x[0] for x in results]
@@ -597,7 +598,7 @@ def _get_aliases(context: Context, data_dict: dict[str, Any]):
 def _get_resources(context: Context, alias: str):
     '''Get a list of resources for an alias. There could be more than one alias
     in a resource_dict.'''
-    alias_sql = sqlalchemy.text(
+    alias_sql = sa.text(
         u'''SELECT alias_of FROM "_table_metadata"
         WHERE name = :alias AND alias_of IS NOT NULL''')
     results = context['connection'].execute(alias_sql, alias=alias).fetchall()
@@ -1156,11 +1157,11 @@ def upsert_data(context: Context, data_dict: dict[str, Any]):
 
         try:
             context['connection'].execute(sql_string, rows)
-        except sqlalchemy.exc.DataError as err:
+        except DataError as err:
             raise InvalidDataError(
                 toolkit._("The data was invalid: {}"
                           ).format(_programming_error_summary(err)))
-        except sqlalchemy.exc.DatabaseError as err:
+        except DatabaseError as err:
             raise ValidationError(
                 {u'records': [_programming_error_summary(err)]})
 
@@ -1234,7 +1235,7 @@ def upsert_data(context: Context, data_dict: dict[str, Any]):
                 try:
                     results = context['connection'].execute(
                         sql_string, used_values + unique_values)
-                except sqlalchemy.exc.DatabaseError as err:
+                except DatabaseError as err:
                     raise ValidationError({
                         u'records': [_programming_error_summary(err)],
                         u'_records_row': num})
@@ -1269,7 +1270,7 @@ def upsert_data(context: Context, data_dict: dict[str, Any]):
                     context['connection'].execute(
                         sql_string,
                         (used_values + unique_values) * 2)
-                except sqlalchemy.exc.DatabaseError as err:
+                except DatabaseError as err:
                     raise ValidationError({
                         u'records': [_programming_error_summary(err)],
                         u'_records_row': num})
@@ -1439,7 +1440,7 @@ def search_data(context: Context, data_dict: dict[str, Any]):
             # See: https://wiki.postgresql.org/wiki/Count_estimate
             # (We also tried using the EXPLAIN to estimate filtered queries but
             #  it didn't estimate well in tests)
-            analyze_count_sql = sqlalchemy.text('''
+            analyze_count_sql = sa.text('''
             SELECT reltuples::BIGINT AS approximate_row_count
             FROM pg_class
             WHERE relname=:resource;
@@ -1968,28 +1969,22 @@ class DatastorePostgresqlBackend(DatastoreBackend):
 
     def delete(self, context: Context, data_dict: dict[str, Any]):
         engine = self._get_write_engine()
-        context['connection'] = engine.connect()
-        _cache_types(context['connection'])
 
-        trans = context['connection'].begin()
-        try:
-            context['connection'].execute(_LOCK_TIMEOUT_SQL)
+        with engine.begin() as conn:
+            context["connection"] = conn
+            _cache_types(conn)
+
+            conn.execute(_LOCK_TIMEOUT_SQL)
             # check if table exists
             if 'filters' not in data_dict:
-                context['connection'].execute(
+                conn.execute(
                     u'DROP TABLE "{0}" CASCADE'.format(
                         data_dict['resource_id'])
                 )
             else:
                 delete_data(context, data_dict)
 
-            trans.commit()
             return _unrename_json_field(data_dict)
-        except Exception:
-            trans.rollback()
-            raise
-        finally:
-            context['connection'].close()
 
     def create(self, context: Context, data_dict: dict[str, Any]):
         '''
@@ -2091,16 +2086,17 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         return search_sql(context, data_dict)
 
     def resource_exists(self, id: str) -> bool:
-        resources_sql = sqlalchemy.text(
+        resources_sql = sa.text(
             u'''SELECT 1 FROM "_table_metadata"
             WHERE name = :id AND alias_of IS NULL''')
-        results = self._get_read_engine().execute(resources_sql, id=id)
+        with self._get_read_engine().connect() as conn:
+            results = conn.execute(resources_sql, {"id": id})
         res_exists = results.rowcount > 0
         return res_exists
 
     def resource_id_from_alias(self, alias: str) -> tuple[bool, Optional[str]]:
         real_id: Optional[str] = None
-        resources_sql = sqlalchemy.text(
+        resources_sql = sa.text(
             u'''SELECT alias_of FROM "_table_metadata" WHERE name = :id''')
         results = self._get_read_engine().execute(resources_sql, id=alias)
 
@@ -2123,54 +2119,61 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             info['meta']['id'] = id
 
             # count of rows in table
-            meta_sql = sqlalchemy.text(
+            meta_sql = sa.text(
                 u'SELECT count(_id) FROM "{0}"'.format(id))
-            meta_results = engine.execute(meta_sql)
+            with engine.connect() as conn:
+                meta_results = conn.execute(meta_sql)
             info['meta']['count'] = meta_results.fetchone()[0]  # type: ignore
 
             # table_type - BASE TABLE, VIEW, FOREIGN TABLE, MATVIEW
-            tabletype_sql = sqlalchemy.text(u'''
+            tabletype_sql = sa.text(u'''
                 SELECT table_type FROM INFORMATION_SCHEMA.TABLES
                 WHERE table_name = '{0}'
                 '''.format(id))
-            tabletype_results = engine.execute(tabletype_sql)
+            with engine.connect() as conn:
+                tabletype_results = conn.execute(tabletype_sql)
             info['meta']['table_type'] = \
                 tabletype_results.fetchone()[0]  # type: ignore
             # MATERIALIZED VIEWS show as BASE TABLE, so
             # we check pg_matviews
-            matview_sql = sqlalchemy.text(u'''
+            matview_sql = sa.text(u'''
                 SELECT count(*) FROM pg_matviews
                 WHERE matviewname = '{0}'
                 '''.format(id))
-            matview_results = engine.execute(matview_sql)
+            with engine.connect() as conn:
+                matview_results = conn.execute(matview_sql)
             if matview_results.fetchone()[0]:  # type: ignore
                 info['meta']['table_type'] = 'MATERIALIZED VIEW'
 
             # SIZE - size of table in bytes
-            size_sql = sqlalchemy.text(
+            size_sql = sa.text(
                 u"SELECT pg_relation_size('{0}')".format(id))
-            size_results = engine.execute(size_sql)
+            with engine.connect() as conn:
+                size_results = conn.execute(size_sql)
             info['meta']['size'] = size_results.fetchone()[0]  # type: ignore
 
             # DB_SIZE - size of database in bytes
-            dbsize_sql = sqlalchemy.text(
+            dbsize_sql = sa.text(
                 u"SELECT pg_database_size(current_database())")
-            dbsize_results = engine.execute(dbsize_sql)
+            with engine.connect() as conn:
+                dbsize_results = conn.execute(dbsize_sql)
             info['meta']['db_size'] = \
                 dbsize_results.fetchone()[0]  # type: ignore
 
             # IDXSIZE - size of all indices for table in bytes
-            idxsize_sql = sqlalchemy.text(
+            idxsize_sql = sa.text(
                 u"SELECT pg_indexes_size('{0}')".format(id))
-            idxsize_results = engine.execute(idxsize_sql)
+            with engine.connect() as conn:
+                idxsize_results = conn.execute(idxsize_sql)
             info['meta']['idx_size'] = \
                 idxsize_results.fetchone()[0]  # type: ignore
 
             # all the aliases for this resource
-            alias_sql = sqlalchemy.text(u'''
+            alias_sql = sa.text(u'''
                 SELECT name FROM "_table_metadata" WHERE alias_of = '{0}'
             '''.format(id))
-            alias_results = engine.execute(alias_sql)
+            with engine.connect() as conn:
+                alias_results = conn.execute(alias_sql)
             aliases = []
             for alias in alias_results.fetchall():
                 aliases.append(alias[0])
@@ -2179,7 +2182,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             # get the data dictionary for the resource
             data_dictionary = datastore_helpers.datastore_dictionary(id)
 
-            schema_sql = sqlalchemy.text(u'''
+            schema_sql = sa.text(u'''
                 SELECT
                 f.attname AS column_name,
                 pg_catalog.format_type(f.atttypid,f.atttypmod) AS native_type,
@@ -2207,7 +2210,8 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                       AND f.attnum > 0
                 ORDER BY c.relname,f.attnum;
             '''.format(id))
-            schema_results = engine.execute(schema_sql)
+            with engine.connect() as conn:
+                schema_results = conn.execute(schema_sql)
             schemainfo = {}
             for row in schema_results.fetchall():
                 row: Any  # Row has incomplete type definition
@@ -2230,11 +2234,12 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         return info
 
     def get_all_ids(self):
-        resources_sql = sqlalchemy.text(
+        resources_sql = sa.text(
             u'''SELECT name FROM "_table_metadata"
             WHERE alias_of IS NULL''')
-        query = self._get_read_engine().execute(resources_sql)
-        return [q[0] for q in query.fetchall()]
+        with self._get_read_engine().connect() as conn:
+            query = conn.execute(resources_sql)
+            return [q[0] for q in query.fetchall()]
 
     def create_function(self, *args: Any, **kwargs: Any):
         return create_function(*args, **kwargs)
@@ -2253,13 +2258,13 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         Postgresql's pg_stat_user_tables. This number will be used when
         specifying `total_estimation_threshold`
         '''
-        connection = get_write_engine().connect()
         sql = 'ANALYZE "{}"'.format(resource_id)
-        try:
-            connection.execute(_LOCK_TIMEOUT_SQL)
-            connection.execute(sql)
-        except sqlalchemy.exc.DatabaseError as err:
-            raise DatastoreException(err)
+        with get_write_engine().connect() as conn:
+            try:
+                conn.execute(_LOCK_TIMEOUT_SQL)
+                conn.execute(sql)
+            except DatabaseError as err:
+                raise DatastoreException(err)
 
 
 def create_function(name: str, arguments: Iterable[dict[str, Any]],

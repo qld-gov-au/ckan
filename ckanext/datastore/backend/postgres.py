@@ -2124,7 +2124,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             with engine.connect() as conn:
                 conn.execute(_LOCK_TIMEOUT_SQL)
                 meta_results = conn.execute(meta_sql)
-            info['meta']['count'] = meta_results.fetchone()[0]  # type: ignore
+            info['meta']['count'] = meta_results.fetchone()[0]
 
             # table_type - BASE TABLE, VIEW, FOREIGN TABLE, MATVIEW
             tabletype_sql = sa.text(u'''
@@ -2135,7 +2135,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 conn.execute(_LOCK_TIMEOUT_SQL)
                 tabletype_results = conn.execute(tabletype_sql)
             info['meta']['table_type'] = \
-                tabletype_results.fetchone()[0]  # type: ignore
+                tabletype_results.fetchone()[0]
             # MATERIALIZED VIEWS show as BASE TABLE, so
             # we check pg_matviews
             matview_sql = sa.text(u'''
@@ -2145,7 +2145,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             with engine.connect() as conn:
                 conn.execute(_LOCK_TIMEOUT_SQL)
                 matview_results = conn.execute(matview_sql)
-            if matview_results.fetchone()[0]:  # type: ignore
+            if matview_results.fetchone()[0]:
                 info['meta']['table_type'] = 'MATERIALIZED VIEW'
 
             # SIZE - size of table in bytes
@@ -2154,7 +2154,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             with engine.connect() as conn:
                 conn.execute(_LOCK_TIMEOUT_SQL)
                 size_results = conn.execute(size_sql)
-            info['meta']['size'] = size_results.fetchone()[0]  # type: ignore
+            info['meta']['size'] = size_results.fetchone()[0]
 
             # DB_SIZE - size of database in bytes
             dbsize_sql = sa.text(
@@ -2163,7 +2163,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 conn.execute(_LOCK_TIMEOUT_SQL)
                 dbsize_results = conn.execute(dbsize_sql)
             info['meta']['db_size'] = \
-                dbsize_results.fetchone()[0]  # type: ignore
+                dbsize_results.fetchone()[0]
 
             # IDXSIZE - size of all indices for table in bytes
             idxsize_sql = sa.text(
@@ -2172,7 +2172,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
                 conn.execute(_LOCK_TIMEOUT_SQL)
                 idxsize_results = conn.execute(idxsize_sql)
             info['meta']['idx_size'] = \
-                idxsize_results.fetchone()[0]  # type: ignore
+                idxsize_results.fetchone()[0]
 
             # all the aliases for this resource
             alias_sql = sa.text(u'''
@@ -2241,7 +2241,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             pass
         return info
 
-    def get_all_ids(self):
+    def get_all_ids(self) -> list[str]:
         resources_sql = sa.text(
             u'''SELECT name FROM "_table_metadata"
             WHERE alias_of IS NULL''')

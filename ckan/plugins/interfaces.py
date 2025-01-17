@@ -1836,6 +1836,30 @@ class IUploader(Interface):
         :param max_size: upload size can be limited by this value in MBs.
         :type max_size: int
 
+        ``delete(filename)``
+
+        Perform a delete.
+
+        :param filename: The filename to use when deleting a file,
+            may be None depending on the storage provider.
+        :type filename: string
+
+        ``download(filename)``
+
+        Provide redirect url or file stream
+
+        :param filename: The filename to use when downloading a file,
+            may be None depending on the storage provider.
+        :type filename: string
+
+        ``metadata(filename)``
+
+        Collect metadata of file. Returns dict
+        { 'content_type': content_type, 'size': length, 'hash': hash }
+        Throws IOError if file does not exist
+
+        :param filename: The filename to use when collecting metadata
+        :type filename: string
         '''
 
     def get_resource_uploader(
@@ -1874,6 +1898,37 @@ class IUploader(Interface):
         :param id: resource id
         :type id: string
 
+        ``delete(id, filename)``
+
+        Perform a delete.
+
+        :param id: resource id, used to delete file
+        :type id: string
+        :param filename: The filename to use when storing a resource,
+            may be None depending on the storage provider.
+        :type filename: string
+
+        ``download(id, filename)``
+
+        Provide redirect url or file stream
+
+        :param id: resource id, used to locate file
+        :type id: string
+        :param filename: The filename to use when storing a resource,
+            may be None depending on the storage provider.
+        :type filename: string
+
+        ``metadata(id, filename)``
+
+        Collect metadata of resource. Returns dict
+        { 'content_type': content_type, 'size': length, 'hash': hash }
+        Throws IOError if file does not exist
+
+        :param id: resource id, used to locate file
+        :type id: string
+        :param filename: The filename to use when collecting metadata,
+            may be None depending on the storage provider.
+        :type filename: string
         '''
 
 

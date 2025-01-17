@@ -4,7 +4,7 @@ from __future__ import annotations
 import cgi
 import json
 import logging
-from typing import Any, Optional, Union
+from typing import Any, cast, Optional, Union
 
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 import flask
@@ -60,22 +60,30 @@ def read(package_type: str, id: str, resource_id: str) -> Union[Response, str]:
         u'auth_user_obj': current_user,
         u'for_view': True
     }
+    data_dict = {u'id': id}
 
     try:
-        package = get_action(u'package_show')(context, {u'id': id})
+        package = get_action(u'package_show')(context, data_dict)
     except NotFound:
         return base.abort(404, _(u'Dataset not found'))
     except NotAuthorized:
         if config.get(u'ckan.auth.reveal_private_datasets'):
-            if current_user.is_authenticated:
-                return base.abort(
-                    403, _(u'Unauthorized to read resource %s') % resource_id)
-            else:
-                return h.redirect_to(
-                    "user.login",
-                    came_from=h.url_for(
-                        '{}_resource.read'.format(package_type),
-                        id=id, resource_id=resource_id))
+            real_pkg_dict = get_action(u'package_show')(
+                cast(Context, {'model': model, 'ignore_auth': True}),
+                data_dict)
+            if real_pkg_dict.get('state') != 'deleted' or \
+                    config.get(u'ckan.auth.reveal_deleted_datasets'):
+                if current_user.is_authenticated:
+                    return base.abort(
+                        403,
+                        _(u'Unauthorized to read resource %s') % resource_id
+                    )
+                else:
+                    return h.redirect_to(
+                        "user.login",
+                        came_from=h.url_for('resource.read',
+                                            id=id, resource_id=resource_id)
+                    )
         return base.abort(
             404,
             _(u'Dataset not found')

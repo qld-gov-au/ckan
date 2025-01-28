@@ -9,6 +9,29 @@ Changelog
 
 .. towncrier release notes start
 
+v.2.11.x 2025-xx-xx
+==================
+
+Major features
+--------------
+
+- Update to Interface IUploader, on get_uploader and get_resource_uploader,
+  new to include new method signature metadata() which can be utilised by
+  archiver and other plugins instead of trying on local disk directly
+- Add get API `resource_file_metadata_show` which takes resource ID and returns
+  { 'content_type': content_type, 'size': length, 'hash': hash } if found
+- Show "Displayed name" instead of "Full name"
+- Add 'en_AU' locale to DataTables
+
+Bugfixes
+--------
+
+- Convert dict values into strings before passing to Solr
+- Add '/dataset' fallback when generating URLs
+- Avoid changing package modified timestamp when reordering resources
+- Invalidate cached pages when cookies change
+- Shorten the lock timeout on dropping datastore tables to avoid deadlocks
+
 v.2.11.1 2024-12-11
 ===================
 

@@ -615,10 +615,13 @@ def user_name_validator(key: FlattenKey, data: FlattenDataDict,
             return
         else:
             # Otherwise return an error: there's already another user with that
-            # name, so you can create a new user with that name or update an
+            # name, so you can't create a new user with that name or update an
             # existing user's name to that name.
             errors[key].append(_('That login name is not available.'))
     elif user_obj_from_context:
+        requester = context.get('auth_user_obj', None)
+        if requester and getattr(requester, 'sysadmin', False) == True:
+            return
         old_user = model.User.get(user_obj_from_context.id)
         if old_user is not None and old_user.state != model.State.PENDING:
             errors[key].append(_('That login name can not be modified.'))

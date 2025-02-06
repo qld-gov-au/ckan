@@ -756,6 +756,30 @@ class TestPackageRead(object):
             url_for("dataset.read", id=dataset["name"]), extra_environ=env, status=403)
         assert 403 == response.status_code
 
+    # Test the 'reveal_deleted_datasets' flag
+    # Allow deleted datasets to return 'not found' even if private ones redirect
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    @pytest.mark.ckan_config("ckan.auth.reveal_deleted_datasets", "False")
+    def test_anonymous_users_cannot_read_deleted_datasets(self, app):
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        response = app.get(
+            url_for("dataset.read", id=dataset["name"]),
+            follow_redirects=False
+        )
+        assert 404 == response.status_code
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    @pytest.mark.ckan_config("ckan.auth.reveal_deleted_datasets", "False")
+    def test_user_not_in_organization_cannot_read_deleted_datasets(self, app, user):
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        env = {"Authorization": user["token"]}
+        response = app.get(
+            url_for("dataset.read", id=dataset["name"]), extra_environ=env, status=403)
+        assert 404 == response.status_code
+
 
 @pytest.mark.usefixtures("non_clean_db", "with_request_context")
 class TestPackageDelete(object):
@@ -1338,6 +1362,36 @@ class TestResourceRead(object):
         )
         assert 302 == response.status_code
         assert '/login' in response.headers[u"Location"]
+
+    # Test the 'reveal_deleted_datasets' flag
+    # Allow deleted resources to return 'not found' even if private ones redirect
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    @pytest.mark.ckan_config("ckan.auth.reveal_deleted_datasets", "False")
+    def test_user_not_in_organization_cannot_read_resources_in_deleted_dataset(self, app, user):
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        resource = factories.Resource(package_id=dataset["id"])
+
+        url = url_for(
+            "{}_resource.read".format(dataset["type"]),
+            id=dataset["id"], resource_id=resource["id"]
+        )
+        env = {"Authorization": user["token"]}
+        app.get(url, extra_environ=env, status=404)
+
+    @pytest.mark.ckan_config("ckan.auth.reveal_private_datasets", "True")
+    @pytest.mark.ckan_config("ckan.auth.reveal_deleted_datasets", "False")
+    def test_anonymous_users_cannot_read_resources_in_deleted_dataset(self, app):
+        organization = factories.Organization()
+        dataset = factories.Dataset(owner_org=organization["id"], private=True)
+        resource = factories.Resource(package_id=dataset["id"])
+        response = app.get(
+            url_for("{}_resource.read".format(dataset["type"]),
+                    id=dataset["id"], resource_id=resource['id']),
+            follow_redirects=False
+        )
+        assert 404 == response.status_code
 
 
 @pytest.mark.usefixtures("non_clean_db", "with_request_context")

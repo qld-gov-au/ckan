@@ -261,11 +261,13 @@ class Upload(object):
             f"ckan.upload.{self.object_type}.mimetypes")
         allowed_types = config.get(f"ckan.upload.{self.object_type}.types")
         if not allowed_mimetypes and not allowed_types:
-            raise logic.ValidationError({
-                self.file_field: [
-                    f"No uploads allowed for object type {self.object_type}"
-                ]
-            })
+            raise logic.ValidationError(
+                {
+                    self.file_field: [
+                        f"No uploads allowed for object type {self.object_type}"
+                    ]
+                }
+            )
 
         # Check that the declared types in the request are supported
         declared_mimetype_from_filename = mimetypes.guess_type(
@@ -299,8 +301,9 @@ class Upload(object):
             self.file_field: [f"Unsupported upload type: {guessed_mimetype}"]
         }
 
-        if allowed_mimetypes and allowed_mimetypes[0] != "*" \
-                and guessed_mimetype not in allowed_mimetypes:
+        if (allowed_mimetypes
+                and allowed_mimetypes[0] != "*"
+                and guessed_mimetype not in allowed_mimetypes):
             raise logic.ValidationError(err)
 
         type_ = guessed_mimetype.split("/")[0]

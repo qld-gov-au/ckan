@@ -3426,7 +3426,7 @@ msgstr "Open ID"
 #: ckan/templates/user/read_base.html:81
 #: ckan/templates/user/read_base.html:101
 msgid "This means only you can see this"
-msgstr "This means only you can see this"
+msgstr "This means only yourself and administrators can see this"
 
 #: ckan/templates/user/read_base.html:86
 msgid "Member Since"

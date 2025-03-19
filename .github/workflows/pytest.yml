@@ -1,0 +1,129 @@
+name: Pytest
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      split:
+        type: choice
+        options:
+          - '["1"]'
+          - '["1", "2", "3", "4"]'
+        description: 'Number of test splits (set to ["1"])'
+        required: false
+        default: '["1"]'
+      store-duration-generation:
+        type: boolean
+        default: True
+        description: "pytest create store-duration config"
+env:
+  NODE_VERSION: '16'
+  PYTHON_VERSION: '3.9'
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        #split: [ 1, 2, 3, 4 ]
+        split: ${{ fromJson(inputs.split || '["1", "2", "3", "4"]') }}  # Default to 4 splits
+
+    services:
+      ckan_postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          POSTGRES_USER: ckan_default
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: ckan_default
+          PGDATA: "/data"
+
+      ckan_redis:
+        image: redis
+        ports:
+          - 6379:6379
+      ckan_solr:
+        image: ckan/ckan-solr:master
+        ports:
+          - 8983:8983
+
+    env:
+      CKAN_SQLALCHEMY_URL: postgresql://ckan_default:pass@localhost/ckan_test
+      CKAN_SOLR_URL: http://localhost:8983/solr/ckan
+      CKAN_REDIS_URL: redis://localhost:6379/1
+      POSTGRES_USER: ckan_default
+      CKAN_DB: ckan_test
+
+    steps:
+      - name: Setup Database
+        run: |
+          # Database Creation
+          export PGPASSWORD=pass
+          createdb --host=localhost --username=${POSTGRES_USER} --encoding=utf-8 --owner=${POSTGRES_USER} ${CKAN_DB}
+          psql --host=localhost --username=${POSTGRES_USER} --command="CREATE USER datastore_read WITH PASSWORD 'pass' NOSUPERUSER NOCREATEDB NOCREATEROLE;"
+          psql --host=localhost --username=${POSTGRES_USER} --command="CREATE USER datastore_write WITH PASSWORD 'pass' NOSUPERUSER NOCREATEDB NOCREATEROLE;"
+          createdb --host=localhost --username=${POSTGRES_USER} --encoding=utf-8 --owner=datastore_write datastore_test
+          psql --host=localhost --username=${POSTGRES_USER} --dbname=datastore_test --command="CREATE extension tablefunc;"
+
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install deps
+        run: |
+         pip install -U pip
+         pip install -r requirements.txt -r dev-requirements.txt -e.
+         pip check
+
+      - name: Init environment
+        run: |
+          export PGPASSWORD=pass
+          # Database Initialization
+          ckan -c test-core-github-actions.ini datastore set-permissions | psql --host=localhost --username=${POSTGRES_USER}
+          ckan -c test-core-github-actions.ini db init
+
+          echo "unzip pytest test duration details"
+          gunzip .test_durations.gz
+
+      - name: Run pytest
+        if: inputs.store-duration-generation != 'true'
+        run: |
+          mkdir -p ./junit/result
+          pytest -v --ckan-ini=test-core-github-actions.ini --cov=ckan --cov=ckanext --junitxml=./junit/result/junit.xml --splits 4 --group ${{ matrix.split }} --splitting-algorithm least_duration
+          #pytest -v --ckan-ini=test-core-github-actions.ini --cov=ckan --cov=ckanext --junitxml=./junit/result/junit.xml
+
+      - name: Run pytest (store durations)
+        if: inputs.store-duration-generation == 'true'
+        run:  pytest -v --ckan-ini=test-core-github-actions.ini --cov=ckan --cov=ckanext --junitxml=./junit/result/junit.xm --store-durations
+
+      - name: Store test_durations results
+        if: inputs.store-duration-generation == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_durations-${{ matrix.split }}
+          path: ./.test_durations
+
+      - name: Store test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-${{ matrix.split }}
+          path: ./junit
+
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "./junit/result/*.xml"
+        if: always()

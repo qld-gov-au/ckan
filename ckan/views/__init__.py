@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+import hashlib
 from urllib.parse import quote
 from flask.wrappers import Response
 
@@ -43,25 +44,62 @@ def set_cors_headers_for_response(response: Response) -> Response:
     return response
 
 
+def set_etag_and_fast_304_response_if_unchanged(response: Response) -> Response:
+    """Set ETag and return 304 if content is unchanged."""
+
+    enable_etags = config.get(u'ckan.cache_etags', True)
+    enable_etags_not_modified = config.get(u'ckan.cache_etags_notModified', True)
+
+    if response.status_code == 200 and enable_etags:
+        if 'etag' not in response.headers:
+            # s3 etag uses md5, so using it here also
+            etag = hashlib.md5(response.get_data(as_text=True).encode()).hexdigest()
+            response.set_etag(etag)
+        else:
+            etag = response.headers.get('etag')
+
+        # Fast 304 Not Modified response if ETag matches
+        if (enable_etags_not_modified
+                and request.if_none_match
+                and etag is not None):
+            etag_str: str = etag  # Explicit type assertion
+            if request.if_none_match.contains(etag_str):
+                # Remove body for faster response
+                response.status_code = 304
+                response.set_data(b'')
+                # Remove Content-Length for 304
+                response.headers.pop('Content-Length', None)
+
+    return response
+
+
 def set_cache_control_headers_for_response(response: Response) -> Response:
+    """ This uses the presents of request environ's: '__no_cache__',
+    '__no_private_cache__', '__limit_cache_by_cookie__' as well
+    as config variables to control cache response headers"""
 
     # __no_cache__ should not be present when caching is allowed
     allow_cache = u'__no_cache__' not in request.environ
+    # __no_private_cache__ should not be present when private caching is allowed
+    private_cache = u'__no_private_cache__' not in request.environ
+    # __limit_cache_by_cookie__ should not not vary by cookie
     limit_cache_by_cookie = u'__limit_cache_by_cookie__' in request.environ
 
     if u'Pragma' in response.headers:
         del response.headers["Pragma"]
 
+    cache_expire = config.get(u'ckan.cache_expires', 0)
+    response.cache_control.max_age = cache_expire
+    response.cache_control.must_revalidate = True
     if allow_cache:
         response.cache_control.public = True
-        try:
-            cache_expire = config.get(u'ckan.cache_expires')
-            response.cache_control.max_age = cache_expire
-            response.cache_control.must_revalidate = True
-        except ValueError:
-            pass
-    else:
+    elif private_cache:
         response.cache_control.private = True
+    else:
+        response.cache_control.no_cache = True
+        response.cache_control.no_store = True
+        response.cache_control.must_revalidate = True
+        response.cache_control.max_age = 0
 
     # Invalidate cached pages upon login/logout
     if limit_cache_by_cookie:

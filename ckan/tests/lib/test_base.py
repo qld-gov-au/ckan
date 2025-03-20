@@ -508,3 +508,20 @@ def test_cache_control_while_logged_in(app):
 
     assert 'Cache-Control' in response_headers
     assert response_headers['Cache-Control'] == 'private'
+
+
+@pytest.mark.ckan_config('ckan.cache_enabled', 'true')
+@pytest.mark.ckan_config('ckan.cache_private_enabled', 'false')
+def test_cache_control_while_logged_in_private_cache_disable(app):
+    from ckan.lib.helpers import url_for
+    user = factories.User(password="correct123")
+    identity = {"login": user["name"], "password": "correct123"}
+    request_headers = {}
+
+    response = app.post(
+        url_for("user.login"), data=identity, headers=request_headers
+    )
+    response_headers = dict(response.headers)
+
+    assert 'Cache-Control' in response_headers
+    assert response_headers['Cache-Control'] == 'private'

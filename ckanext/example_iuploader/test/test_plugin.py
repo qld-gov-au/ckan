@@ -11,8 +11,8 @@ import ckan.model as model
 import ckan.tests.factories as factories
 import ckanext.example_iuploader.plugin as plugin
 
-
 CONTENT = "data"
+FLASK_RESPONSE = flask.Response(CONTENT)
 
 
 # Uses a fake filesystem for the uploads to be stored.
@@ -24,7 +24,7 @@ CONTENT = "data"
 @pytest.mark.ckan_config("ckan.plugins", "example_iuploader")
 @pytest.mark.ckan_config("ckan.webassets.path", "/tmp/webassets")
 @pytest.mark.usefixtures("with_plugins", "non_clean_db")
-@patch.object(flask, "send_file", side_effect=[CONTENT])
+@patch.object(flask, "send_file", side_effect=[FLASK_RESPONSE])
 def test_resource_download_iuploader_called(
         send_file, app, monkeypatch, tmpdir, ckan_config
 ):

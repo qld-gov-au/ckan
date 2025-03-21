@@ -120,8 +120,9 @@ def _add_download_headers(file_path: str,
                           mime_type: Optional[str],
                           response: Union[Response, WerkzeugResponse]) -> None:
     """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
-    to a a file download.
+    to a file download.
     """
+
     if mime_type:
         response.headers['Content-Type'] = mime_type
     if mime_type != 'application/pdf':

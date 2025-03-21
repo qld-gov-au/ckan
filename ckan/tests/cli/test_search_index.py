@@ -131,47 +131,47 @@ class TestSearchIndex(object):
 
         """
         # Create two datasets and check if they are available in search results
-        dataset = factories.Dataset(title=u"First package")
-        another_dataset = factories.Dataset(title=u"Second package")
+        dataset_1 = factories.Dataset()
+        dataset_2 = factories.Dataset()
         search_result = helpers.call_action(u'package_search', q=u"package")
-        assert search_result[u'count'] == 2
+        assert search_result[u'count'] == 2, f"Expected 2 results, got {search_result['count']}: {search_result}"
 
         # Remove one dataset
-        result = cli.invoke(ckan, [u'search-index', u'clear', dataset[u'id']])
+        result = cli.invoke(ckan, [u'search-index', u'clear', dataset_1[u'id']])
         assert not result.exit_code, result.output
         search_result = helpers.call_action(u'package_search', q=u"package")
-        assert search_result[u'count'] == 1
+        assert search_result[u'count'] == 1, f"Dataset not removed from index, got {search_result['count']}: {search_result}"
 
         # Restore removed dataset and make sure all dataset are there
         result = cli.invoke(ckan,
-                            [u'search-index', u'rebuild', dataset[u'id']])
+                            [u'search-index', u'rebuild', dataset_1[u'id']])
         assert not result.exit_code, result.output
         search_result = helpers.call_action(u'package_search', q=u"package")
-        assert search_result[u'count'] == 2
+        assert search_result[u'count'] == 2, f"Dataset not restored in index, got {search_result['count']}: {search_result}"
 
         # Remove one package from index and test `check` tool
-        result = cli.invoke(ckan, [u'search-index', u'clear', another_dataset[u'id']])
+        result = cli.invoke(ckan, [u'search-index', u'clear', dataset_2[u'id']])
         result = cli.invoke(ckan, [u'search-index', u'check'])
         assert not result.exit_code, result.output
         assert u'1 out of 2' in result.output
         search_result = helpers.call_action(u'package_search', q=u"package")
-        assert search_result[u'count'] == 1
+        assert search_result[u'count'] == 1, f"Mismatch in index check results, got {search_result['count']}: {search_result}"
 
         # One can view data from index using CLI
-        result = cli.invoke(ckan, [u'search-index', u'show', dataset[u'id']])
+        result = cli.invoke(ckan, [u'search-index', u'show', dataset_1[u'id']])
         assert not result.exit_code, result.output
-        assert u'First package' in result.output
-        assert u'Second package' not in result.output
+        assert dataset_1["title"] in result.output, f"Failed to find dataset 1, looking for \"{dataset_1['title']}\" got {search_result}"
+        assert dataset_2["title"] not in result.output, f"Failed to not find dataset 2, looking for \"{dataset_2['title']}\" got {search_result}"
 
         # Only search index is checked, not actual data in DB
         result = cli.invoke(ckan,
-                            [u'search-index', u'show', another_dataset[u'id']])
-        assert result.exit_code
+                            [u'search-index', u'show', dataset_2[u'id']])
+        assert result.exit_code, f"Expected failure for missing dataset, {result}"
 
         result = cli.invoke(ckan, [u'search-index', u'rebuild', u'-o'])
         assert not result.exit_code, result.output
         search_result = helpers.call_action(u'package_search', q=u"package")
-        assert search_result[u'count'] == 2
+        assert search_result[u'count'] == 2, f"Dataset count incorrect after full rebuild, got {search_result['count']}: {search_result}"
 
     def test_rebuild_invalid_dataset(self, cli):
         # attempt to index package that doesn't exist

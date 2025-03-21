@@ -134,6 +134,7 @@ class TestSearchIndex(object):
         dataset = factories.Dataset(title=u"First package")
         another_dataset = factories.Dataset(title=u"Second package")
         search_result = helpers.call_action(u'package_search', q=u"package")
+        assert search_result == 2
         assert search_result[u'count'] == 2
 
         # Remove one dataset

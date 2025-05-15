@@ -376,7 +376,6 @@ jobs:
           coverage combine --keep -a ./coverage-data/*
           echo "::endgroup::"
 
-
           echo "::group::pytest-html-report"
           coverage html -d results/coverage_html
           echo "::endgroup::"

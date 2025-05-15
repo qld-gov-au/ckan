@@ -10,7 +10,6 @@ import logging
 import magic
 import mimetypes
 from pathlib import Path
-import six
 from typing import Any, IO, Optional, Union
 from urllib.parse import urlparse
 
@@ -120,7 +119,7 @@ def _add_download_headers(file_path: str,
                           mime_type: Optional[str],
                           response: Union[Response, WerkzeugResponse]) -> None:
     """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
-    to a a file download.
+    to a file download.
     """
     if mime_type:
         response.headers['Content-Type'] = mime_type
@@ -175,7 +174,7 @@ class Upload(object):
         Storage path must be configured.
         '''
         assert self.storage_path
-        return os.path.join(self.storage_path, six.ensure_str(filename))
+        return os.path.join(self.storage_path, filename)
 
     def update_data_dict(self, data_dict: dict[str, Any], url_field: str,
                          file_field: str, clear_field: str) -> None:

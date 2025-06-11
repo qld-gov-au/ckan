@@ -75,7 +75,7 @@
               <dd>{{ user.name }}</dd>
             {% endif %}
           </dl>
-          {% if is_myself %}
+          {% if is_myself or is_sysadmin %}
             <dl>
               <dt>{{ _('Email') }} <span class="label label-default" title="{{ _('This means only you can see this') }}">{{ _('Private') }}</span></dt>
               <dd>{{ user.email }}</dd>

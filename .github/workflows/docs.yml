@@ -31,3 +31,11 @@ jobs:
       - name: Create Docs
         run: |
            sphinx-build doc build/sphinx
+
+      #as pytest runs test_building_the_docs, we might as well have an output
+      - name: Store docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ckan-docs-${{ github.sha }}
+          path: ./build/sphinx
+

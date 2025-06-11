@@ -59,6 +59,8 @@ _engines: Dict[str, Engine] = {}
 WhereClauses: TypeAlias = "list[tuple[str, dict[str, Any]] | tuple[str]]"
 
 _TIMEOUT = 60000  # milliseconds
+_LOCK_TIMEOUT = 20000
+_LOCK_TIMEOUT_SQL = sa.text(u"SET lock_timeout = {}".format(_LOCK_TIMEOUT))
 
 # See http://www.postgresql.org/docs/9.2/static/errcodes-appendix.html
 _PG_ERR_CODE = {
@@ -743,6 +745,8 @@ def _drop_indexes(context: Context, data_dict: dict[str, Any],
         sa.text(sql_get_index_string),
         {"relname": data_dict['resource_id']}
     ).fetchall()
+
+    context['connection'].execute(_LOCK_TIMEOUT_SQL)
     for index in indexes_to_drop:
         context['connection'].execute(sa.text(
             sql_drop_index.format(sa.column(index[0]))
@@ -907,6 +911,9 @@ Indexes: TypeAlias = "Optional[list[Union[str, list[str]]]]"
 
 
 def create_indexes(context: Context, data_dict: dict[str, Any]):
+    """ The connection object at context['connection']
+    should already have an active transaction before calling this.
+    """
     connection = context['connection']
 
     indexes: Indexes = cast(Indexes, datastore_helpers.get_list(
@@ -1716,7 +1723,7 @@ def _create_fulltext_trigger(connection: Any, resource_id: str):
 def upsert(context: Context, data_dict: dict[str, Any]):
     '''
     This method combines upsert insert and update on the datastore. The method
-    that will be used is defined in the mehtod variable.
+    that will be used is defined in the method variable.
 
     Any error results in total failure! For now pass back the actual error.
     Should be transactional.
@@ -2113,6 +2120,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
 
         with engine.begin() as conn:
             context["connection"] = conn
+            conn.execute(_LOCK_TIMEOUT_SQL)
             # check if table exists
             if 'filters' not in data_dict:
                 conn.execute(sa.text('DROP TABLE {0} CASCADE'.format(
@@ -2157,6 +2165,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
             context['connection'].execute(sa.text(
                 f"SET LOCAL statement_timeout TO {timeout}"
             ))
+            context['connection'].execute(_LOCK_TIMEOUT_SQL)
             result = context['connection'].execute(sa.text(
                 'SELECT * FROM pg_tables WHERE tablename = :table'
             ), {"table": data_dict['resource_id']}).fetchone()
@@ -2412,6 +2421,7 @@ class DatastorePostgresqlBackend(DatastoreBackend):
         sql = f'ANALYZE {identifier(resource_id)}'
         with get_write_engine().connect() as conn:
             try:
+                conn.execute(_LOCK_TIMEOUT_SQL)
                 conn.execute(sa.text(sql))
             except DatabaseError as err:
                 raise DatastoreException(err)
@@ -2459,6 +2469,7 @@ def drop_function(name: str, if_exists: bool):
 
 def _write_engine_execute(sql: str):
     with get_write_engine().begin() as conn:
+        conn.execute(_LOCK_TIMEOUT_SQL)
         conn.execute(sa.text(sql))
 
 

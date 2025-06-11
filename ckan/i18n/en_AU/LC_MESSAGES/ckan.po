@@ -3132,7 +3132,7 @@ msgstr "Change details"
 
 #: ckan/templates/user/edit_user_form.html:17
 msgid "Full name"
-msgstr "Full name"
+msgstr "Displayed name"
 
 #: ckan/templates/user/edit_user_form.html:17
 msgid "eg. Joe Bloggs"
@@ -3304,7 +3304,7 @@ msgstr "username"
 
 #: ckan/templates/user/new_user_form.html:11
 msgid "Full Name"
-msgstr "Full Name"
+msgstr "Displayed Name"
 
 #: ckan/templates/user/new_user_form.html:37
 msgid "Create Account"
@@ -3407,7 +3407,7 @@ msgstr "Open ID"
 
 #: ckan/templates/user/snippets/info.html:84
 msgid "This means only you can see this"
-msgstr "This means only you can see this"
+msgstr "This means only yourself and administrators can see this"
 
 #: ckan/templates/user/snippets/info.html:89
 msgid "Member Since"

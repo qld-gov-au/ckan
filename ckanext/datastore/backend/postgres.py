@@ -59,7 +59,7 @@ WhereClauses: TypeAlias = "list[tuple[str, dict[str, Any]] | tuple[str]]"
 
 _TIMEOUT = 60000  # milliseconds
 _LOCK_TIMEOUT = 20000
-_LOCK_TIMEOUT_SQL = u"SET lock_timeout = {}".format(_LOCK_TIMEOUT)
+_LOCK_TIMEOUT_SQL = sa.text(u"SET lock_timeout = {}".format(_LOCK_TIMEOUT))
 
 # See http://www.postgresql.org/docs/9.2/static/errcodes-appendix.html
 _PG_ERR_CODE = {
@@ -730,18 +730,16 @@ def _drop_indexes(context: Context, data_dict: dict[str, Any],
             AND idx.indisprimary = false
             AND t.relname = :relname
         """.format(unique='true' if unique else 'false')
-    with context['connection'].begin():
-        indexes_to_drop = context['connection'].execute(
-            sa.text(sql_get_index_string),
-            {"relname": data_dict['resource_id']}
-        ).fetchall()
+    indexes_to_drop = context['connection'].execute(
+        sa.text(sql_get_index_string),
+        {"relname": data_dict['resource_id']}
+    ).fetchall()
 
-    with context['connection'].begin():
-        context['connection'].execute(_LOCK_TIMEOUT_SQL)
-        for index in indexes_to_drop:
-            context['connection'].execute(sa.text(
-                sql_drop_index.format(sa.column(index[0]))
-            ))
+    context['connection'].execute(_LOCK_TIMEOUT_SQL)
+    for index in indexes_to_drop:
+        context['connection'].execute(sa.text(
+            sql_drop_index.format(sa.column(index[0]))
+        ))
 
 
 def _get_index_names(connection: Any, resource_id: str):
@@ -902,6 +900,9 @@ Indexes: TypeAlias = "Optional[list[Union[str, list[str]]]]"
 
 
 def create_indexes(context: Context, data_dict: dict[str, Any]):
+    """ The connection object at context['connection']
+    should already have an active transaction before calling this.
+    """
     connection = context['connection']
 
     indexes: Indexes = cast(Indexes, datastore_helpers.get_list(

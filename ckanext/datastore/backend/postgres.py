@@ -59,7 +59,7 @@ WhereClauses: TypeAlias = "list[tuple[str, dict[str, Any]] | tuple[str]]"
 
 _TIMEOUT = 60000  # milliseconds
 _LOCK_TIMEOUT = 20000
-_LOCK_TIMEOUT_SQL = u"SET lock_timeout = {}".format(_LOCK_TIMEOUT)
+_LOCK_TIMEOUT_SQL = sa.text(u"SET lock_timeout = {}".format(_LOCK_TIMEOUT))
 
 # See http://www.postgresql.org/docs/9.2/static/errcodes-appendix.html
 _PG_ERR_CODE = {

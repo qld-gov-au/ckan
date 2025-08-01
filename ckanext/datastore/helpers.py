@@ -119,7 +119,10 @@ def get_table_and_function_names_from_sql(context: Context, sql: str):
         ))
 
         try:
-            query_plan = json.loads(result)
+            if isinstance(result, list):
+                query_plan = result
+            else:
+                query_plan = json.loads(result)
             plan = query_plan[0]['Plan']
 
             t, q, f = _parse_query_plan(plan)

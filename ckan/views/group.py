@@ -130,6 +130,7 @@ def index(group_type: str, is_organization: bool) -> str:
 
     extra_vars["q"] = q
     extra_vars["sort_by_selected"] = sort_by
+    extra_vars['has_search_args'] = True if request.args else False
 
     # pass user info to context as needed to view private datasets of
     # orgs correctly
@@ -388,7 +389,7 @@ def _get_group_dict(id: str, is_organization: bool) -> dict[str, Any]:
 def read(group_type: str,
          is_organization: bool,
          id: Optional[str] = None) -> Union[str, Response]:
-    extra_vars = {}
+    extra_vars: dict[str, Any] = {u'has_search_args': True if request.args else False}
     context: Context = {
         u'user': current_user.name,
         u'schema': _db_to_form_schema(group_type=group_type),

@@ -130,7 +130,7 @@ def index(group_type: str, is_organization: bool) -> str:
 
     extra_vars["q"] = q
     extra_vars["sort_by_selected"] = sort_by
-    extra_vars['has_search_args'] = True if request.args else False
+    extra_vars["has_search_args"] = True if request.args else False
 
     # pass user info to context as needed to view private datasets of
     # orgs correctly
@@ -196,7 +196,9 @@ def index(group_type: str, is_organization: bool) -> str:
 
 def _read(id: Optional[str], limit: int, group_type: str) -> dict[str, Any]:
     u''' This is common code used by both read and bulk_process'''
-    extra_vars: dict[str, Any] = {}
+    extra_vars: dict[str, Any] = {
+        u'has_search_args': True if request.args else False
+    }
     context: Context = {
         u'user': current_user.name,
         u'schema': _db_to_form_schema(group_type=group_type),
@@ -389,7 +391,6 @@ def _get_group_dict(id: str, is_organization: bool) -> dict[str, Any]:
 def read(group_type: str,
          is_organization: bool,
          id: Optional[str] = None) -> Union[str, Response]:
-    extra_vars: dict[str, Any] = {u'has_search_args': True if request.args else False}
     context: Context = {
         u'user': current_user.name,
         u'schema': _db_to_form_schema(group_type=group_type),
@@ -399,8 +400,6 @@ def read(group_type: str,
 
     # unicode format (decoded from utf8)
     q = request.args.get(u'q', u'')
-
-    extra_vars["q"] = q
 
     limit = config.get('ckan.datasets_per_page')
 
@@ -434,7 +433,7 @@ def read(group_type: str,
     g.q = q
     g.group_dict = group_dict
 
-    extra_vars = _read(id, limit, group_type)
+    extra_vars: dict[str, Any] = _read(id, limit, group_type)
     try:
         am_following = logic.get_action('am_following_group')(
             {'user': current_user.name}, {'id': id}
@@ -829,7 +828,6 @@ class BulkProcessView(MethodView):
         return context
 
     def get(self, id: str, group_type: str, is_organization: bool) -> str:
-        extra_vars = {}
         context = self._prepare(group_type, id)
         data_dict: dict[str, Any] = {u'id': id, u'type': group_type}
         data_dict['include_datasets'] = False
@@ -852,7 +850,7 @@ class BulkProcessView(MethodView):
         # ckan 2.9: Adding variables that were removed from c object for
         # compatibility with templates in existing extensions
         g.group_dict = group_dict
-        extra_vars = _read(id, limit, group_type)
+        extra_vars: dict[str, Any] = _read(id, limit, group_type)
         extra_vars['packages'] = g.page.items
         extra_vars['group_dict'] = group_dict
         extra_vars['group'] = group

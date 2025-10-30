@@ -2,10 +2,10 @@
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the ckan project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-# 
+#
 # Translators:
 # Adrià Mercader <amercadero@gmail.com>, 2024
-# 
+#
 #, fuzzy
 msgid ""
 msgstr ""

@@ -81,7 +81,7 @@ def read(package_type: str, id: str, resource_id: str) -> Union[Response, str]:
                 else:
                     return h.redirect_to(
                         "user.login",
-                        came_from=h.url_for('resource.read',
+                        came_from=h.url_for('{}_resource.read'.format(package_type),
                                             id=id, resource_id=resource_id)
                     )
         return base.abort(
@@ -632,7 +632,7 @@ class EditResourceViewView(MethodView):
             u'auth_user_obj': current_user
         }
 
-        # update resource should tell us early if the user has privilages.
+        # update resource should tell us early if the user has privileges.
         try:
             check_access(u'resource_update', context, {u'id': resource_id})
         except NotAuthorized:

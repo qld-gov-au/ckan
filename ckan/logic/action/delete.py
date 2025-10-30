@@ -185,8 +185,8 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
                                       pkg_dict.get('resources', []))
 
     # Delete file if it was uploaded
-    if pkg_dict.get('url_type') == 'upload':
-        upload = uploader.get_resource_uploader(pkg_dict)
+    if data_dict.get('url_type') == 'upload':
+        upload = uploader.get_resource_uploader(data_dict)
         # Don't break if old plugin/interface is found
         if hasattr(upload, "delete"):
             upload.delete(id)  # type: ignore

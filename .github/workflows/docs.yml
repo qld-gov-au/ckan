@@ -38,4 +38,3 @@ jobs:
         with:
           name: ckan-docs-${{ github.sha }}
           path: ./build/sphinx
-

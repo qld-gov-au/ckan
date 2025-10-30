@@ -325,6 +325,71 @@ def _get_auto_flask_context():
 
 @core_helper
 def url_for(*args: Any, **kw: Any) -> str:
+    '''Return the URL for an endpoint given some parameters, defaulting to
+    using 'dataset' if the given custom dataset fails.
+
+    This is a wrapper for :py:func:`flask.url_for`
+    and :py:func:`routes.url_for` that adds some extra features that CKAN
+    needs.
+
+    To build a URL for a Flask view, pass the name of the blueprint and the
+    view function separated by a period ``.``, plus any URL parameters::
+        url_for('api.action', ver=3, logic_function='status_show')
+        # Returns /api/3/action/status_show
+
+    For a fully qualified URL pass the ``_external=True`` parameter. This
+    takes the ``ckan.site_url`` and ``ckan.root_path`` settings into account::
+
+        url_for('api.action', ver=3, logic_function='status_show',
+                _external=True)
+
+        # Returns http://example.com/api/3/action/status_show
+
+    URLs built by Pylons use the Routes syntax::
+
+        url_for(controller='my_ctrl', action='my_action', id='my_dataset')
+        # Returns '/dataset/my_dataset'
+
+    Or, using a named route::
+
+        url_for('dataset.read', id='changed')
+        # Returns '/dataset/changed'
+
+    Use ``qualified=True`` for a fully qualified URL when targeting a Pylons
+    endpoint.
+
+    For backwards compatibility, an effort is made to support the Pylons syntax
+    when building a Flask URL, but this support might be dropped in the future,
+    so calls should be updated.
+    '''
+    try:
+        return base_url_for(*args, **kw)
+    except FlaskRouteBuildError:
+        # If the url failed, try again but replace any custom dataset type in
+        #  use with the default 'dataset'
+        retry_with_default = False
+        # Update args if a custom dataset type was set there
+        if (len(args) and '.' in args[0]
+                and not args[0].startswith('/')
+                and not args[0].startswith('dataset.')):
+            args = args[0].split('.', 1)
+            args = ('dataset.' + args[1],)
+            retry_with_default = True
+
+        # Update kw controller if a custom dataset type was set there
+        if (kw.get('controller')
+                and kw.get('controller') != 'dataset'):
+            kw.update({'controller': 'dataset'})
+            retry_with_default = True
+
+        if retry_with_default:
+            return base_url_for(*args, **kw)
+        else:
+            raise
+
+
+@core_helper
+def base_url_for(*args: Any, **kw: Any) -> str:
     '''Return the URL for an endpoint given some parameters.
 
     This is a wrapper for :py:func:`flask.url_for`

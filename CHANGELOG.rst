@@ -9,6 +9,35 @@ Changelog
 
 .. towncrier release notes start
 
+v.2.11.x 2025-xx-xx
+==================
+
+Major features
+--------------
+
+- Update to Interface IUploader, on get_uploader and get_resource_uploader,
+  new to include new method signature metadata() which can be utilised by
+  archiver and other plugins instead of trying on local disk directly
+- Add get API `resource_file_metadata_show` which takes resource ID and returns
+  { 'content_type': content_type, 'size': length, 'hash': hash } if found
+- Show "Displayed name" instead of "Full name"
+- Allow sysadmins to see user emails on profile pages
+- Allow the existence of deleted datasets to be hidden from unauthorised access
+  even if private datasets are revealed
+- Delete file on disk when resource is deleted
+- Provide 'Add resource' shortcut on dataset pages alongside 'Manage'
+
+Bugfixes
+--------
+
+- Convert dict values into strings before passing to Solr
+- Add '/dataset' fallback when generating URLs
+- Avoid changing package modified timestamp when reordering resources
+- Shorten the lock timeout on dropping datastore tables to avoid deadlocks
+- Add 'en_AU' locale to DataTables
+- Instruct bots not to index search result pages
+
+
 v.2.11.4 2025-10-29
 ===================
 
@@ -1494,8 +1523,8 @@ Migration notes
   in the server, all users will be logged out of the site**.
   This can happen for instance:
 
-	* if the CKAN container is redeployed in a Docker / cloud setup and the session directory is not persisted
-	* if the sessions are periodically cleaned by an external script
+    * if the CKAN container is redeployed in a Docker / cloud setup and the session directory is not persisted
+    * if the sessions are periodically cleaned by an external script
 
   Here's a summary of the behaviour changes between CKAN versions:
 
@@ -1518,13 +1547,13 @@ Migration notes
   (note that this stores *all* session data, not just the user identifier). This will probably
   be the default behaviour in future CKAN versions::
 
-	# ckan.ini
-	beaker.session.type = cookie
-	beaker.session.validate_key = CHANGE_ME
+    # ckan.ini
+    beaker.session.type = cookie
+    beaker.session.validate_key = CHANGE_ME
 
-	beaker.session.httponly = True
-	beaker.session.secure = True
-	beaker.session.samesite = Lax # or Strict
+    beaker.session.httponly = True
+    beaker.session.secure = True
+    beaker.session.samesite = Lax # or Strict
 
   Alternatively you can configure another persistent backend for the sessions in the server,
   like an SQL Database or Redis (see the `Beaker configuration <https://beaker.readthedocs.io/en/latest/configuration.html>`_
@@ -1771,14 +1800,14 @@ Migration notes
   store the session data in the `client-side cookie <https://beaker.readthedocs.io/en/latest/sessions.html#cookie-based>`_.
   This will probably be the default behaviour in future CKAN versions::
 
-	# ckan.ini
-	beaker.session.type = cookie
+    # ckan.ini
+    beaker.session.type = cookie
     beaker.session.data_serializer = json
-	beaker.session.validate_key = CHANGE_ME
+    beaker.session.validate_key = CHANGE_ME
 
-	beaker.session.httponly = True
-	beaker.session.secure = True
-	beaker.session.samesite = Lax
+    beaker.session.httponly = True
+    beaker.session.secure = True
+    beaker.session.samesite = Lax
     # or Strict, depending on your setup
 
 v.2.9.8 2023-02-15

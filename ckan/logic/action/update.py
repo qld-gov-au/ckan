@@ -306,8 +306,8 @@ def package_update(
         model.Session.rollback()
         raise ValidationError(errors)
 
-    #avoid revisioning by updating directly
     if not resources_only:
+        #avoid revisioning by updating directly
         model.Session.query(model.Package).filter_by(id=pkg.id).update(
             {"metadata_modified": datetime.datetime.utcnow()})
         model.Session.refresh(pkg)

@@ -3304,7 +3304,7 @@ msgstr "username"
 
 #: ckan/templates/user/new_user_form.html:11
 msgid "Full Name"
-msgstr "Displayed name"
+msgstr "Displayed Name"
 
 #: ckan/templates/user/new_user_form.html:37
 msgid "Create Account"

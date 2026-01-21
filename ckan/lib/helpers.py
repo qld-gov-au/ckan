@@ -1184,14 +1184,40 @@ def get_facet_items_dict(
     # zero or negative limit treated as infinite for historical reasons
     has_limit: bool = limit is not None and limit > 0
 
-    # Follow Solr default behaviour:
+    # Retrieve requested sorting behaviour if any.
+    # If not specified, then follow Solr default behaviour:
     # If limiting results, sort descendingly by count
     # and ascendingly by case-insensitive display name;
     # else sort by display name only.
-    sort_facets: Callable[[Any], tuple[int, str]] = lambda it: \
-        (-it['count'], it['display_name'].lower()) if has_limit \
-        else (it['display_name'].lower())
-    facets.sort(key=sort_facets)
+    sort_field = request.args.get(
+        '_{}_sort'.format(facet),
+        'count' if has_limit else 'index'
+    )
+    if ',' in sort_field:
+        parts = sort_field.split(',', maxsplit=1)
+        sort_field = parts[0]
+        descending_sort: bool = parts[1].lower().startswith('desc')
+    else:
+        descending_sort: bool = sort_field == 'count'
+
+    if sort_field == 'index':
+        facets.sort(
+            key=lambda it: it['display_name'].lower(),
+            reverse=descending_sort
+        )
+    elif sort_field == 'count':
+        # can't just use 'reverse' when we want one to be descending
+        # but the other ascending
+        if descending_sort:
+            facets.sort(key=lambda it: (
+                -it['count'],
+                it['display_name'].lower()
+            ))
+        else:
+            facets.sort(key=lambda it: (
+                it['count'],
+                it['display_name'].lower()
+            ))
 
     if has_limit:
         return facets[:limit]

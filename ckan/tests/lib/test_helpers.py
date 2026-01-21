@@ -988,3 +988,31 @@ def test_get_facet_items_dict(test_request_context):
         assert h.get_facet_items_dict('foo', search_facets, 1) == [
             active_facet_result
         ]
+
+    # lexicographical sort
+    with test_request_context(u'?foo=some-value&_foo_sort=index'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            inactive_facet_result,
+            active_facet_result
+        ]
+
+    # reverse lexicographical sort
+    with test_request_context(u'?foo=some-value&_foo_sort=index,desc'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            active_facet_result,
+            inactive_facet_result
+        ]
+
+    # popularity sort
+    with test_request_context(u'?foo=some-value&_foo_sort=count'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            active_facet_result,
+            inactive_facet_result
+        ]
+
+    # reverse popularity sort
+    with test_request_context(u'?foo=some-value&_foo_sort=count,asc'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            inactive_facet_result,
+            active_facet_result
+        ]

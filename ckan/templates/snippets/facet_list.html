@@ -46,6 +46,18 @@ Dictionary with search facets
 			<h2 class="module-heading">
 			    <i class="fa fa-filter"></i>
 			    {{ title }}
+			    <nav class="sort-content">
+				<button class="btn btn-tertiary fa-classic fa-sort" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+				    <span class="visually-hidden">Sort content selector</span>
+				</button>
+				<ul class="dropdown-menu">
+				    {% set sorting_param = '_{}_sort'.format(name) %}
+				    {% set current_sort = request.args.get(sorting_param, 'none') %}
+				    <li><a class="dropdown-item{% if current_sort == 'count' or current_sort == 'none' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='count') }}" data-sort="popular">Popular</a></li>
+				    <li><a class="dropdown-item{% if current_sort == 'index' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='index') }}" data-sort="ascending">Ascending</a></li>
+				    <li><a class="dropdown-item{% if current_sort == 'index,desc' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='index,desc') }}" data-sort="descending">Descending</a></li>
+				</ul>
+			    </nav>
 			</h2>
 		    {% endblock %}
 		    {% block facet_list_items %}

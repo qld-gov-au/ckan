@@ -46,7 +46,7 @@ Dictionary with search facets
 			<h2 class="module-heading">
 			    <i class="fa fa-filter"></i>
 			    {{ title }}
-			    <nav class="sort-content">
+			    <nav class="sort-content" aria-label="{{ name }}">
 				{% set sorting_param = '_{}_sort'.format(name) %}
 				{% set current_sort = request.args.get(sorting_param, 'count') %}
 				{% if current_sort == 'count' %}

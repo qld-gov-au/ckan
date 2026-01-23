@@ -47,13 +47,26 @@ Dictionary with search facets
 			    <i class="fa fa-filter"></i>
 			    {{ title }}
 			    <nav class="sort-content">
-				<button class="btn btn-tertiary fa-classic fa-sort" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-				    <span class="visually-hidden">Sort content selector</span>
+				{% set sorting_param = '_{}_sort'.format(name) %}
+				{% set current_sort = request.args.get(sorting_param, 'count') %}
+				{% if current_sort == 'count' %}
+					{% set sort_icon = 'fa-arrow-down-wide-short' %}
+					{% set current_sort_label = 'sorted by popularity' %}
+				{% elif current_sort == 'index' %}
+					{% set sort_icon = 'fa-arrow-down-a-z' %}
+					{% set current_sort_label = 'in alphabetical order' %}
+				{% elif current_sort == 'index,desc' %}
+					{% set sort_icon = 'fa-arrow-down-z-a' %}
+					{% set current_sort_label = 'in reverse alphabetical order' %}
+				{% else %}
+					{% set sort_icon = 'fa-sort' %}
+					{% set current_sort_label = 'not sorted' %}
+				{% endif %}
+				<button class="btn btn-tertiary fa-solid {{ sort_icon }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Filters for {{ name }} are currently {{ current_sort_label}}">
+				    <span class="visually-hidden">Select a different order for {{ name }} filters</span>
 				</button>
 				<ul class="dropdown-menu">
-				    {% set sorting_param = '_{}_sort'.format(name) %}
-				    {% set current_sort = request.args.get(sorting_param, 'none') %}
-				    <li><a class="dropdown-item{% if current_sort == 'count' or current_sort == 'none' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='count') }}" data-sort="popular">Popular</a></li>
+				    <li><a class="dropdown-item{% if current_sort == 'count' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='count') }}" data-sort="popular">Popular</a></li>
 				    <li><a class="dropdown-item{% if current_sort == 'index' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='index') }}" data-sort="ascending">Ascending</a></li>
 				    <li><a class="dropdown-item{% if current_sort == 'index,desc' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='index,desc') }}" data-sort="descending">Descending</a></li>
 				</ul>

@@ -339,7 +339,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r dev-requirements.txt
+          pip install setuptools -r dev-requirements.txt
 
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v4

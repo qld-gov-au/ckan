@@ -56,7 +56,7 @@ jobs:
       - name: Install python deps
         run: |
          pip install -U pip
-         pip install -r requirements.txt -r dev-requirements.txt -e.
+         pip install setuptools -r requirements.txt -r dev-requirements.txt -e.
          pip check
 
       - name: Init environment

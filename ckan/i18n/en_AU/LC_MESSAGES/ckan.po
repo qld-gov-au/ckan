@@ -2,10 +2,10 @@
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the ckan project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-# 
+#
 # Translators:
 # Adrià Mercader <amercadero@gmail.com>, 2024
-# 
+#
 #, fuzzy
 msgid ""
 msgstr ""
@@ -3132,7 +3132,7 @@ msgstr "Change details"
 
 #: ckan/templates/user/edit_user_form.html:17
 msgid "Full name"
-msgstr "Full name"
+msgstr "Displayed name"
 
 #: ckan/templates/user/edit_user_form.html:17
 msgid "eg. Joe Bloggs"
@@ -3304,7 +3304,7 @@ msgstr "username"
 
 #: ckan/templates/user/new_user_form.html:11
 msgid "Full Name"
-msgstr "Full Name"
+msgstr "Displayed name"
 
 #: ckan/templates/user/new_user_form.html:37
 msgid "Create Account"

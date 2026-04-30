@@ -26,6 +26,7 @@ Major features
   even if private datasets are revealed
 - Delete file on disk when resource is deleted
 - Provide 'Add resource' shortcut on dataset pages alongside 'Manage'
+- Allow search facets to be sorted by popularity or lexicographically
 
 Bugfixes
 --------
@@ -36,6 +37,7 @@ Bugfixes
 - Shorten the lock timeout on dropping datastore tables to avoid deadlocks
 - Add 'en_AU' locale to DataTables
 - Instruct bots not to index search result pages
+- Use 'h2' instead of 'h1' for subheadings
 
 
 v.2.11.5 2026-04-29

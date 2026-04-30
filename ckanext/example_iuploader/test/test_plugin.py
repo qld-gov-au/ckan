@@ -1,5 +1,7 @@
 # encoding: utf-8
 
+import io
+
 import flask
 import pytest
 from unittest.mock import patch
@@ -10,9 +12,13 @@ import ckan.model as model
 
 import ckan.tests.factories as factories
 import ckanext.example_iuploader.plugin as plugin
-
+from flask import Response
 
 CONTENT = "data"
+
+
+def get_response(*args, **kwargs):
+    return Response(io.BytesIO(CONTENT.encode()), mimetype='text/plain')
 
 
 # Uses a fake filesystem for the uploads to be stored.
@@ -24,10 +30,9 @@ CONTENT = "data"
 @pytest.mark.ckan_config("ckan.plugins", "example_iuploader")
 @pytest.mark.ckan_config("ckan.webassets.path", "/tmp/webassets")
 @pytest.mark.usefixtures("with_plugins", "non_clean_db")
-@patch.object(flask, "send_file", side_effect=[CONTENT])
+@patch.object(flask, "send_file", side_effect=get_response)
 def test_resource_download_iuploader_called(
-        send_file, app, monkeypatch, tmpdir, ckan_config
-):
+        send_file, app, monkeypatch, tmpdir, ckan_config):
     monkeypatch.setitem(ckan_config, u'ckan.storage_path', str(tmpdir))
 
     user = factories.User()

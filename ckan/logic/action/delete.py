@@ -14,7 +14,7 @@ import ckan.logic
 import ckan.logic.action
 import ckan.logic.schema
 import ckan.plugins as plugins
-from ckan import authz
+from ckan import authz, model
 from  ckan.lib.navl.dictization_functions import validate
 from ckan.model.follower import ModelFollowingModel
 

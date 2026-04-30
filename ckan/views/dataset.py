@@ -7,7 +7,7 @@ from collections import OrderedDict
 from functools import partial
 from typing_extensions import TypeAlias
 from urllib.parse import urlencode
-from typing import Any, Iterable, Optional, Union
+from typing import Any, cast, Iterable, Optional, Union
 
 from flask import Blueprint
 from flask.views import MethodView
@@ -213,6 +213,7 @@ def _get_search_details() -> dict[str, Any]:
 def search(package_type: str) -> str:
     extra_vars: dict[str, Any] = {}
 
+    extra_vars['has_search_args'] = True if request.args else False
     extra_vars['q'] = q = request.args.get('q', '')
 
     extra_vars['query_error'] = False
@@ -441,14 +442,20 @@ def read(package_type: str, id: str) -> Union[Response, str]:
         )
     except NotAuthorized:
         if config.get(u'ckan.auth.reveal_private_datasets'):
-            if current_user.is_authenticated:
-                return base.abort(
-                    403, _(u'Unauthorized to read package %s') % id)
-            else:
-                return h.redirect_to(
-                    "user.login",
-                    came_from=h.url_for('{}.read'.format(package_type), id=id)
-                )
+            real_pkg_dict = get_action(u'package_show')(
+                cast(Context, {'model': model, 'ignore_auth': True}),
+                data_dict)
+            if real_pkg_dict.get('state') != 'deleted' or \
+                    config.get(u'ckan.auth.reveal_deleted_datasets'):
+                if current_user.is_authenticated:
+                    return base.abort(
+                        403, _(u'Unauthorized to read package %s') % id)
+                else:
+                    return h.redirect_to(
+                        "user.login",
+                        came_from=h.url_for(
+                            '{}.read'.format(package_type), id=id)
+                    )
         return base.abort(
             404,
             _(u'Dataset not found or you have no permission to view it')

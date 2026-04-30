@@ -213,6 +213,7 @@ def _get_search_details() -> dict[str, Any]:
 def search(package_type: str) -> str:
     extra_vars: dict[str, Any] = {}
 
+    extra_vars['has_search_args'] = True if request.args else False
     extra_vars['q'] = q = request.args.get('q', '')
 
     extra_vars['query_error'] = False

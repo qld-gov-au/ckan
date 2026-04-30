@@ -26,6 +26,7 @@ Major features
   even if private datasets are revealed
 - Delete file on disk when resource is deleted
 - Provide 'Add resource' shortcut on dataset pages alongside 'Manage'
+- Allow search facets to be sorted by popularity or lexicographically
 
 Bugfixes
 --------

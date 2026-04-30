@@ -10207,11 +10207,22 @@ a.tag:hover {
   background-color: #f6f6f6;
   border-top: 1px solid #ddd;
   border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  column-gap: 5px;
 }
 .module-heading::after {
   display: block;
   clear: both;
   content: "";
+}
+
+.module-heading nav.sort-content {
+  margin-inline-start: auto;
+}
+
+.sort-content .selected {
+  font-weight: 600;
 }
 
 .module-content {

@@ -5,8 +5,6 @@ import json
 import logging
 from typing import Any, cast, Optional, Union
 
-from werkzeug.datastructures import FileStorage as FlaskFileStorage
-
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 import flask
 from flask.views import MethodView

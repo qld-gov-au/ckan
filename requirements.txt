@@ -148,7 +148,7 @@ typing-extensions==4.12.2
     #   sqlalchemy2-stubs
 tzlocal==5.2
     # via -r requirements.in
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 watchdog==4.0.1
     # via werkzeug

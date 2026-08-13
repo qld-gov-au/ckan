@@ -37,6 +37,7 @@ RESERVED_FIELDS = SOLR_FIELDS + ["tags", "groups", "res_name", "res_description"
 # Regular expression used to strip invalid XML characters
 _illegal_xml_chars_re = re.compile(u'[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
 
+
 def escape_xml_illegal_chars(val: str, replacement: str='') -> str:
     '''
         Replaces any character not supported by XML with
@@ -91,9 +92,11 @@ class SearchIndex(object):
 
     def get_all_entity_ids(self) -> NoReturn:
         """ Return a list of entity IDs in the index. """
-        raise NotImplemented
+        raise NotImplementedError
+
 
 class NoopSearchIndex(SearchIndex): pass
+
 
 class PackageSearchIndex(SearchIndex):
     def remove_dict(self, pkg_dict: dict[str, Any]) -> None:
@@ -117,8 +120,8 @@ class PackageSearchIndex(SearchIndex):
         validated_pkg_dict = pkg_dict.pop('with_custom_schema')
 
         pkg_dict['data_dict'] = json.dumps(pkg_dict)
-        pkg_dict['validated_data_dict'] = json.dumps(validated_pkg_dict,
-            cls=ckan.lib.navl.dictization_functions.MissingNullEncoder)
+        pkg_dict['validated_data_dict'] = json.dumps(
+            validated_pkg_dict, cls=ckan.lib.navl.dictization_functions.MissingNullEncoder)
 
         # add to string field for sorting
         title = pkg_dict.get('title')
@@ -178,9 +181,9 @@ class PackageSearchIndex(SearchIndex):
         # if there is an owner_org we want to add this to groups for index
         # purposes
         if pkg_dict.get('organization'):
-           pkg_dict['organization'] = pkg_dict['organization']['name']
+            pkg_dict['organization'] = pkg_dict['organization']['name']
         else:
-           pkg_dict['organization'] = None
+            pkg_dict['organization'] = None
 
         resource_fields = [('name', 'res_name'),
                            ('description', 'res_description'),
@@ -188,7 +191,7 @@ class PackageSearchIndex(SearchIndex):
                            ('url', 'res_url'),
                            ('resource_type', 'res_type')]
         resource_extras = [(e, 'res_extras_' + e) for e
-                            in model.Resource.get_extra_columns()]
+                           in model.Resource.get_extra_columns()]
         # flatten the structure for indexing:
         for resource in pkg_dict.get('resources', []):
             for (okey, nkey) in resource_fields + resource_extras:
@@ -232,6 +235,9 @@ class PackageSearchIndex(SearchIndex):
                 except DateParserError:
                     log.warning('%r: %r value of %r is not a valid date', pkg_dict['id'], key, value)
                     continue
+            if isinstance(value, dict):
+                # Solr 8+ chokes on passing dict values unless doing an atomic update
+                value = json.dumps(value)
             new_dict[key] = value
 
         pkg_dict = new_dict
@@ -262,7 +268,7 @@ class PackageSearchIndex(SearchIndex):
 
         # add a unique index_id to avoid conflicts
         import hashlib
-        pkg_dict['index_id'] = hashlib.md5(six.b('%s%s' % (pkg_dict['id'],config.get('ckan.site_id')))).hexdigest()
+        pkg_dict['index_id'] = hashlib.md5(six.b('%s%s' % (pkg_dict['id'], config.get('ckan.site_id')))).hexdigest()
 
         for item in PluginImplementations(IPackageController):
             pkg_dict = item.before_dataset_index(pkg_dict)
@@ -274,7 +280,7 @@ class PackageSearchIndex(SearchIndex):
         labels = lib_plugins.get_permission_labels()
         dataset = model.Package.get(pkg_dict['id'])
         pkg_dict['permission_labels'] = labels.get_dataset_labels(
-            dataset) if dataset else [] # TestPackageSearchIndex-workaround
+            dataset) if dataset else []  # TestPackageSearchIndex-workaround
 
         # send to solr:
         conn = None
@@ -286,7 +292,7 @@ class PackageSearchIndex(SearchIndex):
             conn.add(docs=[pkg_dict], commit=commit)
         except pysolr.SolrError as e:
             msg = 'Solr returned an error: {0}'.format(
-                e.args[0][:1000] # limit huge responses
+                e.args[0][:1000]  # limit huge responses
             )
             raise SearchIndexError(msg)
         except socket.error as e:

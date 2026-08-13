@@ -14,24 +14,16 @@ from ckan.common import config, asbool, aslist
 import sqlalchemy
 from sqlalchemy import text
 
-
 import ckan
+from ckan import authz, logic, model, plugins
 import ckan.lib.dictization
-import ckan.logic as logic
 import ckan.logic.schema
 import ckan.lib.dictization.model_dictize as model_dictize
-import ckan.lib.jobs as jobs
+from ckan.lib import datapreview, jobs, plugins as lib_plugins, search, uploader
 import ckan.lib.navl.dictization_functions
-import ckan.model as model
 import ckan.model.misc as misc
-import ckan.plugins as plugins
-import ckan.lib.search as search
 from ckan.model.follower import ModelFollowingModel
 from ckan.lib.search.query import solr_literal
-
-import ckan.lib.plugins as lib_plugins
-import ckan.lib.datapreview as datapreview
-import ckan.authz as authz
 
 from ckan.common import _
 from ckan.types import ActionResult, Context, DataDict, Query, Schema
@@ -94,7 +86,7 @@ def package_list(context: Context, data_dict: DataDict) -> ActionResult.PackageL
     if offset:
         query = query.offset(offset)
 
-    ## Returns the first field in each result record
+    # Returns the first field in each result record
     return context["session"].scalars(
         query
     ).all()
@@ -125,7 +117,7 @@ def current_package_list_with_resources(
     offset = data_dict.get('offset', 0)
     user = context['user']
 
-    if not 'offset' in data_dict and 'page' in data_dict:
+    if 'offset' not in data_dict and 'page' in data_dict:
         log.warning('"page" parameter is deprecated.  '
                     'Use the "offset" parameter instead')
         page = data_dict['page']
@@ -138,7 +130,7 @@ def current_package_list_with_resources(
 
     search = package_search(context, {
         'q': '', 'rows': limit, 'start': offset,
-        'include_private': authz.is_sysadmin(user) })
+        'include_private': authz.is_sysadmin(user)})
     return search.get('results', [])
 
 
@@ -283,7 +275,7 @@ def package_collaborator_list_for_user(
     if capacity and capacity not in allowed_capacities:
         raise ValidationError(
             {'message': _('Capacity must be one of "{}"').format(', '.join(
-            allowed_capacities))})
+                allowed_capacities))})
 
     q = model.Session.query(model.PackageMember).\
         filter(model.PackageMember.user_id == user.id)
@@ -419,8 +411,7 @@ def _group_or_org_list(
         if context.get('ignore_auth') or (user and authz.is_sysadmin(user.name)):
             labels = None
         else:
-            labels = lib_plugins.get_permission_labels(
-                ).get_user_dataset_labels(user)
+            labels = lib_plugins.get_permission_labels().get_user_dataset_labels(user)
 
         counts = model_dictize.get_group_dataset_counts(
             fq='entity_type:package', permissions_labels=labels)
@@ -589,9 +580,8 @@ def group_list_authz(context: Context,
     if not sysadmin or am_member:
         q: Any = model.Session.query(model.Member.group_id) \
             .filter(model.Member.table_name == 'user') \
-            .filter(
-                model.Member.capacity.in_(roles)
-            ).filter(model.Member.table_id == user_id) \
+            .filter(model.Member.capacity.in_(roles)) \
+            .filter(model.Member.table_id == user_id) \
             .filter(model.Member.state == 'active')
         group_ids = []
         for row in q:
@@ -614,7 +604,8 @@ def group_list_authz(context: Context,
         if package:
             groups = set(groups) - set(package.get_groups())
 
-    group_list = model_dictize.group_list_dictize(groups, context,
+    group_list = model_dictize.group_list_dictize(
+        groups, context,
         with_package_counts=asbool(data_dict.get('include_dataset_count')),
         with_member_counts=asbool(data_dict.get('include_member_count')))
     return group_list
@@ -730,7 +721,8 @@ def organization_list_for_user(context: Context,
             (org, group_ids_to_capacities[org.id]) for org in orgs_q.all()]
 
     context['with_capacity'] = True
-    orgs_list = model_dictize.group_list_dictize(orgs_and_capacities, context,
+    orgs_list = model_dictize.group_list_dictize(
+        orgs_and_capacities, context,
         with_package_counts=asbool(data_dict.get('include_dataset_count')),
         with_member_counts=asbool(data_dict.get('include_member_count')))
     return orgs_list
@@ -878,8 +870,8 @@ def user_list(
             ), model.User.name), else_=model.User.fullname)
         )
     elif order_by_field == 'number_created_packages' \
-         or order_by_field == 'fullname' \
-         or order_by_field == 'about' or order_by_field == 'sysadmin':
+        or order_by_field == 'fullname' \
+        or order_by_field == 'about' or order_by_field == 'sysadmin':
         query = query.order_by(order_by_field, model.User.name)
     else:
         query = query.order_by(order_by_field)
@@ -887,7 +879,7 @@ def user_list(
     # Filter deleted users
     query = query.filter(model.User.state != model.State.DELETED)
 
-    ## hack for pagination
+    # hack for pagination
     if context.get('return_query'):
         return query
 
@@ -919,7 +911,7 @@ def package_relationships_list(context: Context,
     :rtype: list of dictionaries
 
     '''
-    ##TODO needs to work with dictization layer
+    # TODO needs to work with dictization layer
     api = context.get('api_version')
 
     id = _get_or_bust(data_dict, "id")
@@ -1076,7 +1068,7 @@ def resource_show(
 
     pkg_dict = logic.get_action('package_show')(
         context.copy(), {'id': resource.package.id}
-        )
+    )
 
     for resource_dict in pkg_dict['resources']:
         if resource_dict['id'] == id:
@@ -1131,13 +1123,52 @@ def resource_view_list(context: Context,
     context['resource'] = resource
     _check_access('resource_view_list', context, data_dict)
     q = model.Session.query(model.ResourceView).filter_by(resource_id=id)
-    ## only show views when there is the correct plugin enabled
+    # only show views when there is the correct plugin enabled
     resource_views = [
         resource_view for resource_view
         in q.order_by(model.ResourceView.order).all()
         if datapreview.get_view_plugin(resource_view.view_type)
     ]
     return model_dictize.resource_view_list_dictize(resource_views, context)
+
+
+def resource_file_metadata_show(
+        context: Context, data_dict: DataDict
+    ) -> Union[dict[str, Any], IOError]:
+    '''Get file metadata from a resource if it was uploaded.
+
+    :param id: the id of the resource
+    :type id: string
+
+    :returns: the meta data of resource file { 'content_type': content_type, 'size': length, 'hash': hash }
+    :rtype: dictionary
+    '''
+    id = _get_or_bust(data_dict, 'id')
+
+    resource = model.Resource.get(id)
+    if not resource:
+        raise NotFound
+    context['resource'] = resource
+
+    _check_access('resource_file_metadata_show', context, data_dict)
+
+    pkg_dict = logic.get_action('package_show')(
+        context,
+        {'id': resource.package.id,
+         'include_tracking': asbool(data_dict.get('include_tracking', False))})
+
+    for resource_dict in pkg_dict['resources']:
+        if resource_dict['id'] == id:
+            break
+    else:
+        log.error('Could not find resource %s after all', id)
+        raise NotFound(_('Resource was not found.'))
+
+    upload = uploader.get_resource_uploader(resource_dict)
+    try:
+        return upload.metadata(id)  # type: ignore
+    except (IOError, AttributeError):
+        raise NotFound
 
 
 def _group_or_org_show(
@@ -2606,6 +2637,7 @@ def organization_follower_list(
         context, data_dict,
         ckan.logic.schema.default_follow_group_schema(),
         model.UserFollowingGroup)
+
 
 def _am_following(
         context: Context, data_dict: DataDict, default_schema: Schema,

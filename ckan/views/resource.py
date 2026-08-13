@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Optional, Union
+from typing import Any, cast, Optional, Union
 
 from werkzeug.wrappers.response import Response as WerkzeugResponse
 import flask
@@ -60,22 +60,28 @@ def read(package_type: str, id: str, resource_id: str) -> Union[Response, str]:
         u'auth_user_obj': current_user,
         u'for_view': True
     }
+    data_dict = {u'id': id}
 
     try:
-        package = get_action(u'package_show')(context, {u'id': id})
+        package = get_action(u'package_show')(context, data_dict)
     except NotFound:
         return base.abort(404, _(u'Dataset not found'))
     except NotAuthorized:
         if config.get(u'ckan.auth.reveal_private_datasets'):
-            if current_user.is_authenticated:
-                return base.abort(
-                    403, _(u'Unauthorized to read resource %s') % resource_id)
-            else:
-                return h.redirect_to(
-                    "user.login",
-                    came_from=h.url_for(
-                        '{}_resource.read'.format(package_type),
-                        id=id, resource_id=resource_id))
+            real_pkg_dict = get_action(u'package_show')(
+                cast(Context, {'model': model, 'ignore_auth': True}),
+                data_dict)
+            if real_pkg_dict.get('state') != 'deleted' or \
+                    config.get(u'ckan.auth.reveal_deleted_datasets'):
+                if current_user.is_authenticated:
+                    return base.abort(
+                        403, _(u'Unauthorized to read resource %s') % resource_id)
+                else:
+                    return h.redirect_to(
+                        "user.login",
+                        came_from=h.url_for(
+                            '{}_resource.read'.format(package_type),
+                            id=id, resource_id=resource_id))
         return base.abort(
             404,
             _(u'Dataset not found')
@@ -166,37 +172,45 @@ def download(package_type: str,
 
     if rsc.get(u'url_type') == u'upload':
         upload = uploader.get_resource_uploader(rsc)
-        filepath = upload.get_path(rsc[u'id'])
-        mimetype = rsc.get('mimetype')
-
-        storage = getattr(upload, "storage", None)
-        if isinstance(storage, fk.Storage):
-            overrides = {}
-            if mimetype:
-                overrides["content_type"] = mimetype
-            location = files.Location(filepath)
-            file_data = files.FileData(
-                location,
-                size=storage.size(location),
-                **overrides,
-            )
-            if isinstance(storage, files.Storage):
-                resp = storage.as_response(file_data, filename)
-            else:
-                resp = streaming_response(
-                    storage.stream(file_data),
-                    file_data.content_type,
-                )
-                resp.headers.set(
-                    "content-disposition",
-                    "attachment",
-                    filename=filename or file_data.location,
-                )
-
+        # Don't break if old plugin/interface is found
+        if hasattr(upload, 'download'):
+            try:
+                resp = upload.download(resource_id, filename)  # type: ignore
+            except (IOError, OSError):
+                # includes FileNotFoundError
+                return base.abort(404, _('Resource data not found'))
         else:
-            resp = flask.send_file(filepath, download_name=filename)
-            if mimetype:
-                resp.headers['Content-Type'] = mimetype
+            filepath = upload.get_path(rsc[u'id'])
+            mimetype = rsc.get('mimetype')
+
+            storage = getattr(upload, "storage", None)
+            if isinstance(storage, fk.Storage):
+                overrides = {}
+                if mimetype:
+                    overrides["content_type"] = mimetype
+                location = files.Location(filepath)
+                file_data = files.FileData(
+                    location,
+                    size=storage.size(location),
+                    **overrides,
+                )
+                if isinstance(storage, files.Storage):
+                    resp = storage.as_response(file_data, filename)
+                else:
+                    resp = streaming_response(
+                        storage.stream(file_data),
+                        file_data.content_type,
+                    )
+                    resp.headers.set(
+                        "content-disposition",
+                        "attachment",
+                        filename=filename or file_data.location,
+                    )
+
+            else:
+                resp = flask.send_file(filepath, download_name=filename)
+                if mimetype:
+                    resp.headers['Content-Type'] = mimetype
         signals.resource_download.send(resource_id)
         return resp
 

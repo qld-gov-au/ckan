@@ -9,13 +9,12 @@ from typing import Any, Union, Type, cast
 
 import sqlalchemy as sqla
 
-import ckan.lib.jobs as jobs
+from ckan.lib import api_token, jobs, uploader
 import ckan.logic
 import ckan.logic.schema
 import ckan.plugins as plugins
-import ckan.lib.api_token as api_token
 from ckan import authz, model
-from  ckan.lib.navl.dictization_functions import validate
+from ckan.lib.navl.dictization_functions import validate
 from ckan.lib.search import rebuild
 from ckan.model.follower import ModelFollowingModel
 
@@ -175,7 +174,7 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
     if entity is None:
         raise NotFound
 
-    _check_access('resource_delete',context, data_dict)
+    _check_access('resource_delete', context, data_dict)
 
     package_id = entity.get_package_id()
 
@@ -185,6 +184,15 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
         plugin.before_resource_delete(context, data_dict,
                                       pkg_dict.get('resources', []))
 
+    # Delete file if it was uploaded
+    if data_dict.get('url_type') == 'upload':
+        upload = uploader.get_resource_uploader(data_dict)
+        # Don't break if old plugin/interface is found
+        if hasattr(upload, "delete"):
+            upload.delete(id)  # type: ignore
+        else:
+            log.warning("%s does not have delete function, could not cleanup: %s", type(upload).__name__, id)
+
     package_show_context: Union[Context, Any] = dict(context, for_update=True)
     pkg_dict = _get_action('package_show')(
         package_show_context, {'id': package_id})
@@ -193,8 +201,7 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
     update_context['original_package'] = dict(pkg_dict)
 
     if pkg_dict.get('resources'):
-        pkg_dict['resources'] = [r for r in pkg_dict['resources'] if not
-                r['id'] == id]
+        pkg_dict['resources'] = [r for r in pkg_dict['resources'] if r['id'] != id]
     try:
         pkg_dict = _get_action('package_update')(update_context, pkg_dict)
     except ValidationError as e:
@@ -281,6 +288,7 @@ def package_relationship_delete(context: Context, data_dict: DataDict) -> Action
     relationship.delete()
     model.repo.commit()
 
+
 def member_delete(context: Context, data_dict: DataDict) -> ActionResult.MemberDelete:
     '''Remove an object (e.g. a user, dataset or group) from a group.
 
@@ -310,10 +318,10 @@ def member_delete(context: Context, data_dict: DataDict) -> ActionResult.MemberD
     _check_access('member_delete', context, data_dict)
 
     member = model.Session.query(model.Member).\
-            filter(model.Member.table_name == obj_type).\
-            filter(model.Member.table_id == obj.id).\
-            filter(model.Member.group_id == group.id).\
-            filter(model.Member.state    == 'active').first()
+        filter(model.Member.table_name == obj_type).\
+        filter(model.Member.table_id == obj.id).\
+        filter(model.Member.group_id == group.id).\
+        filter(model.Member.state == 'active').first()
     if member:
         member.delete()
         model.repo.commit()
@@ -366,7 +374,7 @@ def package_collaborator_delete(context: Context, data_dict: DataDict) -> Action
     model.repo.commit()
 
     log.info('User %s removed as collaborator from package %s',
-        user_id, package.id)
+             user_id, package.id)
 
 
 def _group_or_org_delete(
@@ -397,8 +405,8 @@ def _group_or_org_delete(
     # not deleted
     if is_org:
         dataset_ids = model.Session.query(model.Package.id) \
-                        .filter_by(owner_org=group.id) \
-                        .filter(model.Package.state != 'deleted')
+            .filter_by(owner_org=group.id) \
+            .filter(model.Package.state != 'deleted')
         if dataset_ids.count():
             if not authz.check_config_permission(
                     'ckan.auth.create_unowned_dataset'):
@@ -435,6 +443,7 @@ def _group_or_org_delete(
 
     model.repo.commit()
 
+
 def group_delete(context: Context, data_dict: DataDict) -> ActionResult.GroupDelete:
     '''Delete a group.
 
@@ -445,6 +454,7 @@ def group_delete(context: Context, data_dict: DataDict) -> ActionResult.GroupDel
 
     '''
     return _group_or_org_delete(context, data_dict)
+
 
 def organization_delete(context: Context, data_dict: DataDict) -> ActionResult.OrganizationDelete:
     '''Delete an organization.
@@ -458,6 +468,7 @@ def organization_delete(context: Context, data_dict: DataDict) -> ActionResult.O
 
     '''
     return _group_or_org_delete(context, data_dict, is_org=True)
+
 
 def _group_or_org_purge(
         context: Context, data_dict: DataDict, is_org: bool = False):
@@ -494,8 +505,8 @@ def _group_or_org_purge(
     if is_org:
         # Clear the owner_org field
         dataset_ids = model.Session.query(model.Package.id) \
-                        .filter_by(owner_org=group.id) \
-                        .filter(model.Package.state != 'deleted')
+            .filter_by(owner_org=group.id) \
+            .filter(model.Package.state != 'deleted')
         if dataset_ids.count():
             if not authz.check_config_permission(
                     'ckan.auth.create_unowned_dataset'):
@@ -529,6 +540,7 @@ def _group_or_org_purge(
     group.purge()
     model.repo.commit_and_remove()
 
+
 def group_purge(context: Context, data_dict: DataDict) -> None:
     '''Purge a group.
 
@@ -547,6 +559,7 @@ def group_purge(context: Context, data_dict: DataDict) -> None:
 
     '''
     return _group_or_org_purge(context, data_dict, is_org=False)
+
 
 def organization_purge(context: Context, data_dict: DataDict) -> None:
     '''Purge an organization.
@@ -569,6 +582,7 @@ def organization_purge(context: Context, data_dict: DataDict) -> None:
     '''
     return _group_or_org_purge(context, data_dict, is_org=True)
 
+
 def task_status_delete(context: Context, data_dict: DataDict) -> None:
     '''Delete a task status.
 
@@ -589,6 +603,7 @@ def task_status_delete(context: Context, data_dict: DataDict) -> None:
 
     entity.delete()
     model.Session.commit()
+
 
 def vocabulary_delete(context: Context, data_dict: DataDict) -> None:
     '''Delete a tag vocabulary.
@@ -611,6 +626,7 @@ def vocabulary_delete(context: Context, data_dict: DataDict) -> None:
 
     vocab_obj.delete()
     model.repo.commit()
+
 
 def tag_delete(context: Context, data_dict: DataDict) -> None:
     '''Delete a tag.
@@ -643,6 +659,7 @@ def tag_delete(context: Context, data_dict: DataDict) -> None:
     for p in update_packages:
         ckan.logic.index_update_package(context, p.id)
 
+
 def _unfollow(
         context: Context, data_dict: DataDict, schema: Schema,
         FollowerClass: Type['ModelFollowingModel[Any, Any]']):
@@ -668,6 +685,7 @@ def _unfollow(
 
     model.repo.commit()
 
+
 def unfollow_user(context: Context, data_dict: DataDict) -> None:
     '''Stop following a user.
 
@@ -676,9 +694,10 @@ def unfollow_user(context: Context, data_dict: DataDict) -> None:
 
     '''
     schema = context.get('schema') or (
-            ckan.logic.schema.default_follow_user_schema())
+        ckan.logic.schema.default_follow_user_schema())
     _check_access('unfollow_user', context, data_dict)
     _unfollow(context, data_dict, schema, model.UserFollowingUser)
+
 
 def unfollow_dataset(context: Context, data_dict: DataDict) -> None:
     '''Stop following a dataset.
@@ -688,10 +707,10 @@ def unfollow_dataset(context: Context, data_dict: DataDict) -> None:
 
     '''
     schema = context.get('schema') or (
-            ckan.logic.schema.default_follow_dataset_schema())
+        ckan.logic.schema.default_follow_dataset_schema())
     _check_access('unfollow_dataset', context, data_dict)
     _unfollow(context, data_dict, schema,
-            model.UserFollowingDataset)
+              model.UserFollowingDataset)
 
 
 def _group_or_org_member_delete(context: Context,
@@ -723,7 +742,7 @@ def group_member_delete(context: Context, data_dict: DataDict) -> None:
     :type username: string
 
     '''
-    _check_access('group_member_delete',context, data_dict)
+    _check_access('group_member_delete', context, data_dict)
     return _group_or_org_member_delete(context, data_dict)
 
 
@@ -739,7 +758,7 @@ def organization_member_delete(context: Context,
     :type username: string
 
     '''
-    _check_access('organization_member_delete',context, data_dict)
+    _check_access('organization_member_delete', context, data_dict)
     return _group_or_org_member_delete(context, data_dict)
 
 
@@ -750,11 +769,11 @@ def unfollow_group(context: Context, data_dict: DataDict) -> None:
     :type id: string
 
     '''
-    schema = context.get('schema',
-            ckan.logic.schema.default_follow_group_schema())
+    schema = context.get(
+        'schema', ckan.logic.schema.default_follow_group_schema())
     _check_access('unfollow_group', context, data_dict)
     _unfollow(context, data_dict, schema,
-            model.UserFollowingGroup)
+              model.UserFollowingGroup)
 
 
 @ckan.logic.validate(ckan.logic.schema.job_clear_schema)

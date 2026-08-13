@@ -9,6 +9,35 @@ Changelog
 
 .. towncrier release notes start
 
+v.2.12.x 2026-xx-xx
+==================
+
+Major features
+--------------
+
+- Update to Interface IUploader, on get_uploader and get_resource_uploader,
+  new method signature metadata() which can be utilised by
+  archiver and other plugins instead of trying on local disk directly
+- Add get API `resource_file_metadata_show` which takes resource ID and returns
+  { 'content_type': content_type, 'size': length, 'hash': hash } if found
+- Show "Displayed name" instead of "Full name"
+- Allow the existence of deleted datasets to be hidden from unauthorised access
+  even if private datasets are revealed
+- Delete file on disk when resource is deleted
+- Provide 'Add resource' shortcut on dataset pages alongside 'Manage'
+- Allow search facets to be sorted by popularity or lexicographically
+
+Bugfixes
+--------
+
+- Convert dict values into strings before passing to Solr
+- Add '/dataset' fallback when generating URLs
+- Shorten the lock timeout on dropping datastore tables to avoid deadlocks
+- Add 'en_AU' locale to DataTables
+- Instruct bots not to index search result pages
+- Raise NotImplementedError rather than NotImplemented
+
+
 v.2.12.0 2026-08-12
 ===================
 

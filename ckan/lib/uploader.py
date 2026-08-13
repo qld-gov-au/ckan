@@ -1,25 +1,27 @@
 from __future__ import annotations
 
 import contextlib
+import flask
+import hashlib
 import os
 import datetime
 import logging
 import magic
 import mimetypes
 from pathlib import Path
-from typing import Any, IO, Optional
+from typing import Any, IO, Optional, Union
 from urllib.parse import urlparse
 
 import file_keeper as fk
 from werkzeug.datastructures import FileStorage as FlaskFileStorage
+from werkzeug.wrappers.response import Response as WerkzeugResponse
 
-import ckan.lib.munge as munge
-import ckan.logic as logic
-import ckan.plugins as plugins
+from ckan import logic, plugins
+from ckan.lib import base, files, munge
 from ckan.common import config
-from ckan.lib import files
-from ckan.types import ErrorDict, PUploader, PResourceUploader
+from ckan.types import ErrorDict, PUploader, PResourceUploader, Response
 
+ALLOWED_UPLOAD_TYPES = (FlaskFileStorage)
 MB = 1 << 20
 
 log = logging.getLogger(__name__)
@@ -105,6 +107,36 @@ def get_max_resource_size() -> int:
     return config.get('ckan.max_resource_size')
 
 
+def _file_hashnlength(local_path: str) -> tuple[str, int]:
+    BLOCKSIZE = 65536
+    hasher = hashlib.sha1()
+    length = 0
+
+    with open(local_path, 'rb') as afile:
+        buf = afile.read(BLOCKSIZE)
+        while len(buf) > 0:
+            hasher.update(buf)
+            length += len(buf)
+
+            buf = afile.read(BLOCKSIZE)
+
+    return (str(hasher.hexdigest()), length)
+
+
+def _add_download_headers(file_path: str,
+                          mime_type: Optional[str],
+                          response: Union[Response, WerkzeugResponse]) -> None:
+    """ Add appropriate 'Content-Type' and 'Content-Disposition' headers
+    to a file download.
+    """
+    if mime_type:
+        response.headers['Content-Type'] = mime_type
+    if mime_type != 'application/pdf':
+        file_name = file_path.split('/')[-1]
+        response.headers['Content-Disposition'] = \
+            'attachment; filename=' + file_name
+
+
 class Upload(object):
     storage_path: Optional[str]
     filename: Optional[str]
@@ -148,6 +180,13 @@ class Upload(object):
         if old_filename:
             self.old_filepath = os.path.join(self.storage_path, old_filename)
 
+    def _get_storage_path_for(self, filename: str) -> str:
+        '''Function to get the path to a stored file.
+        Storage path must be configured.
+        '''
+        assert self.storage_path
+        return os.path.join(self.storage_path, filename)
+
     def update_data_dict(self, data_dict: dict[str, Any], url_field: str,
                          file_field: str, clear_field: str) -> None:
         ''' Manipulate data from the data_dict.  url_field is the name of the
@@ -160,16 +199,19 @@ class Upload(object):
         self.clear = data_dict.pop(clear_field, None)
         self.file_field = file_field
         self.upload_field_storage = data_dict.pop(file_field, None)
+        self.preserve_filename = data_dict.get('preserve_filename', None)
 
         if not self.storage_path:
             return
 
-        if isinstance(self.upload_field_storage, FlaskFileStorage):
+        if isinstance(self.upload_field_storage, ALLOWED_UPLOAD_TYPES):
             if self.upload_field_storage.filename:
                 self.filename = self.upload_field_storage.filename
-                self.filename = str(datetime.datetime.utcnow()) + self.filename
+                if not self.preserve_filename:
+                    self.filename = str(datetime.datetime.utcnow()) \
+                        + self.filename
                 self.filename = munge.munge_filename_legacy(self.filename)
-                self.filepath = os.path.join(self.storage_path, self.filename)
+                self.filepath = self._get_storage_path_for(self.filename)
                 self.upload_file = self.upload_field_storage.stream
                 self.tmp_filepath = self.filepath + '~'
 
@@ -214,8 +256,13 @@ class Upload(object):
 
     def verify_type(self):
 
-        if not self.upload_file:
+        if not self.filename or not self.upload_file:
             return
+
+        # if these fields are None when the others are populated
+        # then our code is wrong
+        assert self.upload_field_storage
+        assert self.filepath
 
         allowed_mimetypes = config.get(
             f"ckan.upload.{self.object_type}.mimetypes")
@@ -271,6 +318,38 @@ class Upload(object):
         if preferred_extension and self.filename and self.filepath:
             self.filename = str(Path(self.filename).with_suffix(preferred_extension))
             self.filepath = str(Path(self.filepath).with_suffix(preferred_extension))
+
+    def delete(self, filename: str) -> None:
+        ''' Delete file we are pointing at'''
+        if self.storage_path and not filename.startswith('http'):
+            try:
+                # Delete file from storage_path and filename
+                os.remove(self._get_storage_path_for(filename))
+            except OSError:
+                pass
+
+    def download(self, filename: str) -> Union[Response, WerkzeugResponse]:
+        ''' Generate file stream or redirect for file'''
+        if not self.storage_path:
+            return base.abort(404, "Uploaded resource not found")
+        filepath = self._get_storage_path_for(filename)
+        resp = flask.send_file(filepath)
+        content_type, _ = mimetypes.guess_type(filepath)
+        _add_download_headers(filepath, content_type, resp)
+        return resp
+
+    def metadata(self, filename: str) -> Union[dict[str, Any], IOError]:
+        ''' Return metadata of file'''
+        if not self.storage_path:
+            return {}
+        try:
+            filepath = self._get_storage_path_for(filename)
+            content_type, _ = mimetypes.guess_type(filepath)
+            hash, length = _file_hashnlength(filepath)
+            return {'content_type': content_type, 'size': length, 'hash': hash}
+        except IOError as e:
+            log.error("Could not retrieve meta data, IOError thrown: %s", e)
+            return e
 
 
 class ResourceUpload(object):
@@ -505,11 +584,11 @@ class FKUpload(object):
             try:
                 self.storage.validate_content_type(self.upload_file.content_type)
             except files.exc.WrongUploadTypeError as e:
-                    raise logic.ValidationError(
-                        {
-                            self.file_field: [str(e)]
-                        }
-                    )
+                raise logic.ValidationError(
+                    {
+                        self.file_field: [str(e)]
+                    }
+                )
 
         # fix extension according to the content type
         guessed_mimetype = self.upload_file.content_type
@@ -561,7 +640,6 @@ class FKResourceUpload(object):
                 and urlparse(url).path
         ):
             self.mimetype = mimetypes.guess_type(url)[0]
-
 
     def get_directory(self, id: str) -> str:
         if not self.storage:

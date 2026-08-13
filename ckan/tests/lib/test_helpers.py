@@ -1146,6 +1146,89 @@ def test_get_facet_items_dict(test_request_context: Any):
         assert result[2]["name"] == "ccc"
         assert result[2]["active"]
 
+    search_facets = {'foo': {'items': [
+        {
+            'name': 'some-value',
+            'display_name': 'Some value',
+            'count': 2
+        },
+        {
+            'name': 'some-other-value',
+            'display_name': 'Some other value',
+            'count': 1
+        }
+    ]}}
+    # The active facet has more hits than the inactive,
+    # and is alphabetically later
+    active_facet_result = {
+        'name': 'some-value', 'display_name': 'Some value',
+        'count': 2, 'active': True
+    }
+    inactive_facet_result = {
+        'name': 'some-other-value', 'display_name': 'Some other value',
+        'count': 1, 'active': False
+    }
+
+    with test_request_context(u'?foo=some-value'):
+        # calls that should return no results
+        assert h.get_facet_items_dict(None, None) == []
+        assert h.get_facet_items_dict('foo', None) == []
+        assert h.get_facet_items_dict('foo', {'foo': {'items': []}}) == []
+        assert h.get_facet_items_dict('baz', search_facets) == []
+
+        # calls that should return results
+
+        # no limit, include active item
+        # should sort alphabetically
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            inactive_facet_result,
+            active_facet_result
+        ]
+
+        # no limit, exclude active item
+        assert h.get_facet_items_dict('foo', search_facets, 0, True) == [
+            inactive_facet_result
+        ]
+
+        # limit greater than total, should sort by popularity
+        assert h.get_facet_items_dict('foo', search_facets, 10) == [
+            active_facet_result,
+            inactive_facet_result
+        ]
+
+        # limit less than total, should sort by popularity
+        assert h.get_facet_items_dict('foo', search_facets, 1) == [
+            active_facet_result
+        ]
+
+    # lexicographical sort
+    with test_request_context(u'?foo=some-value&_foo_sort=index'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            inactive_facet_result,
+            active_facet_result
+        ]
+
+    # reverse lexicographical sort
+    with test_request_context(u'?foo=some-value&_foo_sort=index,desc'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            active_facet_result,
+            inactive_facet_result
+        ]
+
+    # popularity sort
+    with test_request_context(u'?foo=some-value&_foo_sort=count'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            active_facet_result,
+            inactive_facet_result
+        ]
+
+    # reverse popularity sort
+    with test_request_context(u'?foo=some-value&_foo_sort=count,asc'):
+        assert h.get_facet_items_dict('foo', search_facets) == [
+            inactive_facet_result,
+            active_facet_result
+        ]
+
 
 def test_unix_locale_to_bcp47():
     assert h.unix_locale_to_bcp47('en') == 'en'

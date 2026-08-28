@@ -346,7 +346,7 @@ class Upload(object):
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:
             log.error("Could not retrieve meta data, IOError thrown: %s", e)
-            return e
+            raise
 
 
 class ResourceUpload(object):
@@ -518,4 +518,4 @@ class ResourceUpload(object):
             return {'content_type': content_type, 'size': length, 'hash': hash}
         except IOError as e:
             log.error("Could not retrieve metadata, IOError thrown: %s", e)
-            return e
+            raise

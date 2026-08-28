@@ -1183,7 +1183,7 @@ def resource_file_metadata_show(
 
     upload = uploader.get_resource_uploader(resource_dict)
     try:
-        return upload.metadata(id)  # type: ignore
+        return upload.metadata(id, resource_dict.get('url'))
     except (IOError, AttributeError):
         raise NotFound
 

@@ -176,7 +176,7 @@ def download(package_type: str,
         # Don't break if old plugin/interface is found
         if hasattr(upload, 'download'):
             try:
-                resp = upload.download(resource_id, filename)  # type: ignore
+                resp = upload.download(resource_id, filename)
             except (IOError, OSError):
                 # includes FileNotFoundError
                 return base.abort(404, _('Resource data not found'))

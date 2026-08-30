@@ -326,6 +326,71 @@ def _get_auto_flask_context():
 
 @core_helper
 def url_for(*args: Any, **kw: Any) -> str:
+    '''Return the URL for an endpoint given some parameters, defaulting to
+    using 'dataset' if the given custom dataset fails.
+
+    This is a wrapper for :py:func:`flask.url_for`
+    and :py:func:`routes.url_for` that adds some extra features that CKAN
+    needs.
+
+    To build a URL for a Flask view, pass the name of the blueprint and the
+    view function separated by a period ``.``, plus any URL parameters::
+        url_for('api.action', ver=3, logic_function='status_show')
+        # Returns /api/3/action/status_show
+
+    For a fully qualified URL pass the ``_external=True`` parameter. This
+    takes the ``ckan.site_url`` and ``ckan.root_path`` settings into account::
+
+        url_for('api.action', ver=3, logic_function='status_show',
+                _external=True)
+
+        # Returns http://example.com/api/3/action/status_show
+
+    URLs built by Pylons use the Routes syntax::
+
+        url_for(controller='my_ctrl', action='my_action', id='my_dataset')
+        # Returns '/dataset/my_dataset'
+
+    Or, using a named route::
+
+        url_for('dataset.read', id='changed')
+        # Returns '/dataset/changed'
+
+    Use ``qualified=True`` for a fully qualified URL when targeting a Pylons
+    endpoint.
+
+    For backwards compatibility, an effort is made to support the Pylons syntax
+    when building a Flask URL, but this support might be dropped in the future,
+    so calls should be updated.
+    '''
+    try:
+        return base_url_for(*args, **kw)
+    except FlaskRouteBuildError:
+        # If the url failed, try again but replace any custom dataset type in
+        #  use with the default 'dataset'
+        retry_with_default = False
+        # Update args if a custom dataset type was set there
+        if (len(args) and '.' in args[0]
+                and not args[0].startswith('/')
+                and not args[0].startswith('dataset.')):
+            args = args[0].split('.', 1)
+            args = ('dataset.' + args[1],)
+            retry_with_default = True
+
+        # Update kw controller if a custom dataset type was set there
+        if (kw.get('controller')
+                and kw.get('controller') != 'dataset'):
+            kw.update({'controller': 'dataset'})
+            retry_with_default = True
+
+        if retry_with_default:
+            return base_url_for(*args, **kw)
+        else:
+            raise
+
+
+@core_helper
+def base_url_for(*args: Any, **kw: Any) -> str:
     '''Return the URL for an endpoint given some parameters.
 
     This is a wrapper for :py:func:`flask.url_for`
@@ -1113,15 +1178,49 @@ def get_facet_items_dict(
             facets.append(dict(active=False, **facet_item))
         elif not exclude_active:
             facets.append(dict(active=True, **facet_item))
-    # Sort descendingly by count and ascendingly by case-sensitive display name
-    sort_facets: Callable[[Any], tuple[int, str]] = lambda it: (
-        -it['count'], it['display_name'].lower())
-    facets.sort(key=sort_facets)
-    if hasattr(g, 'search_facets_limits'):
-        if g.search_facets_limits and limit is None:
-            limit = g.search_facets_limits.get(facet)
-    # zero treated as infinite for hysterical raisins
-    if limit is not None and limit > 0:
+
+    if limit is None and getattr(g, 'search_facets_limits', None):
+        limit = g.search_facets_limits.get(facet)
+
+    # zero or negative limit treated as infinite for historical reasons
+    has_limit: bool = limit is not None and limit > 0
+
+    # Retrieve requested sorting behaviour if any.
+    # If not specified, then follow Solr default behaviour:
+    # If limiting results, sort descendingly by count
+    # and ascendingly by case-insensitive display name;
+    # else sort by display name only.
+    sort_field = request.args.get(
+        '_{}_sort'.format(facet),
+        'count' if has_limit else 'index'
+    )
+    if ',' in sort_field:
+        parts = sort_field.split(',', maxsplit=1)
+        sort_field = parts[0]
+        descending_sort: bool = parts[1].lower().startswith('desc')
+    else:
+        descending_sort: bool = sort_field == 'count'
+
+    if sort_field == 'index':
+        facets.sort(
+            key=lambda it: it['display_name'].lower(),
+            reverse=descending_sort
+        )
+    elif sort_field == 'count':
+        # can't just use 'reverse' when we want one to be descending
+        # but the other ascending
+        if descending_sort:
+            facets.sort(key=lambda it: (
+                -it['count'],
+                it['display_name'].lower()
+            ))
+        else:
+            facets.sort(key=lambda it: (
+                it['count'],
+                it['display_name'].lower()
+            ))
+
+    if has_limit:
         return facets[:limit]
     return facets
 

@@ -24,7 +24,7 @@ defaults:
       CKAN_POSTGRES_USER: ckan_default
       CKAN_POSTGRES_PWD: pass
       PGPASSWORD: ckan
-      PYTEST_COMMON_OPTIONS: -v --ckan-ini=test-core-circle-ci.ini --cov=ckan --cov=ckanext --junitxml=~/junit/result/junit.xml
+      PYTEST_COMMON_OPTIONS: -v --ckan-ini=test-core-ci.ini --cov=ckan --cov=ckanext --junitxml=~/junit/result/junit.xml
       # report usage of deprecated features
       SQLALCHEMY_WARN_20: 1
   pg_image: &pg_image
@@ -48,7 +48,7 @@ defaults:
 jobs:
   test-python-3:
     docker:
-      - image: python:3.9-bullseye
+      - image: python:3.10-bullseye
         <<: *ckan_env
       - <<: *pg_image
       - <<: *redis_image

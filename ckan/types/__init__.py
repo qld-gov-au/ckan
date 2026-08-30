@@ -23,6 +23,8 @@ from .model import (
     Query,
 )
 
+from werkzeug.wrappers.response import Response as WerkzeugResponse
+
 if TYPE_CHECKING:
     from ckanext.activity.model import Activity
 
@@ -229,6 +231,15 @@ class PUploader(Protocol):
     ) -> None:
         ...
 
+    def delete(self, filename: str) -> None:
+        ...
+
+    def download(self, filename: str) -> Union[Response, WerkzeugResponse]:
+        ...
+
+    def metadata(self, filename: str) -> Union[dict[str, Any], IOError]:
+        ...
+
 
 class PResourceUploader(Protocol):
     """Contract for IUploader.get_uploader
@@ -244,4 +255,17 @@ class PResourceUploader(Protocol):
         ...
 
     def upload(self, id: str, max_size: int = ...) -> None:
+        ...
+
+    def delete(self, id: str, filename: Optional[str] = None) -> None:
+        ...
+
+    def download(self, id: str, filename: Optional[str] = None
+                 ) -> Union[Response, WerkzeugResponse]:
+        ...
+
+    def metadata(self,
+                 id: str,
+                 filename: Optional[str] = None
+                 ) -> Union[dict[str, Any], IOError]:
         ...

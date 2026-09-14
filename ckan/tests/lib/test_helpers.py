@@ -14,10 +14,8 @@ import pytest
 
 from ckan.config.middleware import flask_app
 import ckan.lib.helpers as h
-import ckan.exceptions
+from ckan.exceptions import CkanUrlException
 from ckan.tests import helpers, factories
-
-CkanUrlException = ckan.exceptions.CkanUrlException
 
 
 class BaseUrlFor(object):
@@ -1021,3 +1019,30 @@ def test_get_facet_items_dict(test_request_context):
             inactive_facet_result,
             active_facet_result
         ]
+
+
+def test_resource_view_fields(monkeypatch):
+    resource_dict = {'id': 'abcde'}
+    # empty list if datastore is inactive
+    assert h.resource_view_get_fields(resource_dict) == []
+    resource_dict['datastore_active'] = False
+    assert h.resource_view_get_fields(resource_dict) == []
+
+    # populated list if datastore is active
+    resource_dict['datastore_active'] = True
+    monkeypatch.setattr(
+        h.logic, 'get_action',
+        lambda name: (
+            lambda context, data_dict: {
+                'fields': [{'id': 'foo'}, {'id': 'baz'}]
+            }
+        ))
+    assert h.resource_view_get_fields(resource_dict) == ['baz', 'foo']
+
+    # empty list if datastore query fails
+    def raise_validation_error():
+        raise h.logic.ValidationError('test')
+    monkeypatch.setattr(
+        h.logic, 'get_action',
+        lambda name: (lambda context, data_dict: raise_validation_error()))
+    assert h.resource_view_get_fields(resource_dict) == []

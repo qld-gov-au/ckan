@@ -14,7 +14,7 @@ jobs:
       contents: read
     steps:
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # Fetch all history, including tags
           persist-credentials: false
@@ -33,3 +33,10 @@ jobs:
       - name: Create Docs
         run: |
            sphinx-build doc build/sphinx
+
+      #as pytest runs test_building_the_docs, we might as well have an output
+      - name: Store docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ckan-docs-${{ github.sha }}
+          path: ./build/sphinx

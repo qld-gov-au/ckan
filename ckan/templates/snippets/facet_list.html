@@ -46,6 +46,31 @@ Dictionary with search facets
 			<h2 class="module-heading">
 			    <i class="fa fa-filter"></i>
 			    {{ title }}
+              <nav class="sort-content" aria-label="{{ name }}">
+                {% set sorting_param = '_{}_sort'.format(name) %}
+                {% set current_sort = request.args.get(sorting_param, 'count') %}
+                {% if current_sort == 'count' %}
+                  {% set sort_icon = 'fa-arrow-down-wide-short' %}
+                  {% set current_sort_label = 'sorted by popularity' %}
+                {% elif current_sort == 'index' %}
+                  {% set sort_icon = 'fa-arrow-down-a-z' %}
+                  {% set current_sort_label = 'in alphabetical order' %}
+                {% elif current_sort == 'index,desc' %}
+                  {% set sort_icon = 'fa-arrow-down-z-a' %}
+                  {% set current_sort_label = 'in reverse alphabetical order' %}
+                {% else %}
+                  {% set sort_icon = 'fa-sort' %}
+                  {% set current_sort_label = 'not sorted' %}
+                {% endif %}
+                <button class="btn btn-tertiary fa-solid {{ sort_icon }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Filters for {{ name }} are currently {{ current_sort_label}}">
+                  <span class="visually-hidden">Select a different order for {{ name }} filters</span>
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item{% if current_sort == 'count' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='count') }}" data-sort="popular">Popular</a></li>
+                  <li><a class="dropdown-item{% if current_sort == 'index' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='index') }}" data-sort="ascending">Ascending</a></li>
+                  <li><a class="dropdown-item{% if current_sort == 'index,desc' %} selected{% endif %}" href="{{ h.remove_url_param(key=sorting_param, replace='index,desc') }}" data-sort="descending">Descending</a></li>
+                </ul>
+              </nav>
 			</h2>
 		    {% endblock %}
 		    {% block facet_list_items %}
@@ -77,7 +102,7 @@ Dictionary with search facets
 					    <a href="{{ h.remove_url_param('_%s_limit' % name, replace=0, extras=extras, alternative_url=alternative_url) }}" class="read-more">{{ _('Show More {facet_type}').format(facet_type=title) }}</a>
 					{% endif %}
 				    {% else %}
-					<a href="{{ h.remove_url_param('_%s_limit' % name, extras=extras, alternative_url=alternative_url) }}" class="read-more">{{ _('Show Only Popular {facet_type}').format(facet_type=title) }}</a>
+					<a href="{{ h.remove_url_param('_%s_limit' % name, extras=extras, alternative_url=alternative_url) }}" class="read-more">{{ _('Show Less {facet_type}').format(facet_type=title) }}</a>
 				    {% endif %}
 				</p>
 			    {% else %}

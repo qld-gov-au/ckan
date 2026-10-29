@@ -223,16 +223,16 @@ def _activities_limit(
     q: QActivity,
     limit: int,
     offset: Optional[int] = None,
-    revese_order: Optional[bool] = False,
+    reverse_order: Optional[bool] = False,
 ) -> QActivity:
     """
     Return an SQLAlchemy query for all activities at an offset with a limit.
 
-    revese_order:
+    reverse_order:
         if we want the last activities before a date, we must reverse the
         order before limiting.
     """
-    if revese_order:
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -312,8 +312,8 @@ def user_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -327,7 +327,7 @@ def user_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -389,8 +389,8 @@ def package_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -404,7 +404,7 @@ def package_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -540,8 +540,8 @@ def group_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -555,7 +555,7 @@ def group_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -599,8 +599,8 @@ def organization_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -614,7 +614,7 @@ def organization_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -735,8 +735,8 @@ def dashboard_activity_list(
         q = q.filter(Activity.timestamp < before)
 
     # revert sort queries for "only before" queries
-    revese_order = after and not before
-    if revese_order:
+    reverse_order = after and not before
+    if reverse_order:
         q = q.order_by(Activity.timestamp)
     else:
         # type_ignore_reason: incomplete SQLAlchemy types
@@ -750,7 +750,7 @@ def dashboard_activity_list(
     results = q.all()
 
     # revert result if required
-    if revese_order:
+    if reverse_order:
         results.reverse()
 
     return results
@@ -842,7 +842,7 @@ def _filter_activities_by_permission_labels(
 
     # `user_permission_labels` is None when user is sysadmin
     if user_permission_labels is not None:
-        # activitities that have permission labels. For now in includes package
+        # activities that have permission labels. For now in includes package
         # and resource views activities. If new activity types guarded by
         # permission labels, like resource activities are added, include them
         # into this filter.

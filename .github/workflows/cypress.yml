@@ -44,7 +44,7 @@ jobs:
       CKAN_REDIS_URL: redis://localhost:6379/1
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -69,7 +69,7 @@ jobs:
           ckan config-tool test-core-ci.ini "ckan.plugins = activity"
 
       - name: Run Cypress
-        uses: cypress-io/github-action@c495c3ddffba403ba11be95fffb67e25203b3799 # v7.1.10
+        uses: cypress-io/github-action@09090944bd8aaa2a517cefb6e38bf1aae336b42b # v7.4.3
         with:
           start: ckan -c test-core-ci.ini run
 

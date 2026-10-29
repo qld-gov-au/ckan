@@ -86,7 +86,7 @@ jobs:
       # I went with `/tmp/.test_durations`.
       - name: Restore test durations
         id: restore-test-durations
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: /tmp/.test_durations
           key: tests-durations-${{ github.sha }}
@@ -156,7 +156,7 @@ jobs:
         env:
           MATRIX_SPLIT: ${{ matrix.split }}
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1  # Fetch all history, including tags
           persist-credentials: false
@@ -181,7 +181,7 @@ jobs:
           gunzip .test_durations.gz
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ env.PIP_CACHE_DIR }}
           key: ${{ runner.os }}-pip-${{ hashFiles('*requirements.txt') }}
@@ -324,7 +324,7 @@ jobs:
       # Finally, we cache the new test durations. This file will be restored in next CI execution
       # (see step "Restore test durations" above).
       - name: Cache final test durations
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: /tmp/.test_durations
           key: tests-durations-${{ github.sha }}
@@ -342,12 +342,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Cache pip
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ env.PIP_CACHE_DIR }}
           key: ${{ runner.os }}-pip-${{ hashFiles('*requirements.txt') }}

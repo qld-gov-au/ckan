@@ -310,7 +310,7 @@ class Upload(object):
 
     def delete(self, filename: str) -> None:
         ''' Delete file we are pointing at'''
-        if self.storage_path and not filename.startswith('http'):
+        if self.storage_path and filename and not filename.startswith('http'):
             try:
                 # Delete file from storage_path and filename
                 os.remove(self._get_storage_path_for(filename))

@@ -189,13 +189,15 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
                                       pkg_dict.get('resources', []))
 
     # Delete file if it was uploaded
-    if data_dict.get('url_type') == 'upload':
+    if entity.url_type == 'upload':
         upload = uploader.get_resource_uploader(data_dict)
         # Don't break if old plugin/interface is found
         if hasattr(upload, "delete"):
             upload.delete(id)
         else:
-            log.warning("%s does not have delete function, could not cleanup: %s", type(upload).__name__, id)
+            log.warning(
+                "%s does not have delete function, could not cleanup: %s",
+                type(upload).__name__, id)
 
     package_show_context: Union[Context, Any] = dict(context, for_update=True)
     pkg_dict = _get_action('package_show')(

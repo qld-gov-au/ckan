@@ -36,7 +36,7 @@ jobs:
 
       #as pytest runs test_building_the_docs, we might as well have an output
       - name: Store docs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: ckan-docs-${{ github.sha }}
           path: ./build/sphinx

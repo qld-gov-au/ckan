@@ -75,7 +75,7 @@
               <dd>{{ user.name }}</dd>
             {% endif %}
           </dl>
-          {% if is_myself %}
+          {% if is_myself or is_sysadmin %}
             <dl>
               <dt>{{ _('Email') }} <span class="badge bg-secondary" aria-label="{{ _('This information is visible to you and admins') }}" data-bs-title="{{ _('This information is visible to you and admins') }}" data-bs-toggle="tooltip">{{ _('Private') }}</span></dt>
               <dd>{{ user.email }}</dd>

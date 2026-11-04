@@ -37,6 +37,7 @@ RESERVED_FIELDS = SOLR_FIELDS + ["tags", "groups", "res_name", "res_description"
 # Regular expression used to strip invalid XML characters
 _illegal_xml_chars_re = re.compile(u'[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
 
+
 def escape_xml_illegal_chars(val: str, replacement: str='') -> str:
     '''
         Replaces any character not supported by XML with
@@ -232,6 +233,9 @@ class PackageSearchIndex(SearchIndex):
                 except DateParserError:
                     log.warning('%r: %r value of %r is not a valid date', pkg_dict['id'], key, value)
                     continue
+            if isinstance(value, dict):
+                # Solr 8+ chokes on passing dict values unless doing an atomic update
+                value = json.dumps(value)
             new_dict[key] = value
 
         pkg_dict = new_dict

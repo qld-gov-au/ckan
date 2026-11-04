@@ -175,14 +175,19 @@ def download(package_type: str,
 
     if rsc.get(u'url_type') == u'upload':
         upload = uploader.get_resource_uploader(rsc)
+        download_impl = 'FKResourceUpload'
         # Don't break if old plugin/interface is found
         if hasattr(upload, 'download'):
+            download_impl = 'ResourceUpload'
             try:
                 resp = upload.download(resource_id, filename)
+            except NotImplementedError:
+                download_impl = 'FKResourceUpload'
             except (IOError, OSError, files.exc.LocationError):
                 # includes FileNotFoundError
                 return base.abort(404, _('No download is available'))
-        else:
+
+        if download_impl == 'FKResourceUpload':
             filepath = upload.get_path(rsc[u'id'])
             mimetype = rsc.get('mimetype')
 

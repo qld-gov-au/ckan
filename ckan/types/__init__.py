@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from functools import partial
@@ -21,6 +22,7 @@ from flask.wrappers import Response, Request
 from sqlalchemy.orm.scoping import ScopedSession
 from sqlalchemy.orm.query import Query
 
+from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 from .logic import ActionResult
 
@@ -241,6 +243,15 @@ class PUploader(Protocol):
     ) -> None:
         ...
 
+    def delete(self, filename: str) -> None:
+        ...
+
+    def download(self, filename: str) -> Union[Response, WerkzeugResponse]:
+        ...
+
+    def metadata(self, filename: str) -> Union[dict[str, Any], IOError]:
+        ...
+
 
 class PResourceUploader(Protocol):
     """Contract for IUploader.get_uploader
@@ -256,6 +267,19 @@ class PResourceUploader(Protocol):
         ...
 
     def upload(self, id: str, max_size: int = ...) -> None:
+        ...
+
+    def delete(self, id: str, filename: Optional[str] = None) -> None:
+        ...
+
+    def download(self, id: str, filename: Optional[str] = None
+                 ) -> Union[Response, WerkzeugResponse]:
+        ...
+
+    def metadata(self,
+                 id: str,
+                 filename: Optional[str] = None
+                 ) -> Union[dict[str, Any], IOError]:
         ...
 
 

@@ -9,13 +9,12 @@ from typing import Any, Union, Type, cast
 
 import sqlalchemy as sqla
 
-import ckan.lib.jobs as jobs
+from ckan.lib import api_token, jobs, uploader
 import ckan.logic
 import ckan.logic.schema
 import ckan.plugins as plugins
-import ckan.lib.api_token as api_token
 from ckan import authz, model
-from  ckan.lib.navl.dictization_functions import validate
+from ckan.lib.navl.dictization_functions import validate
 from ckan.lib.search import rebuild
 from ckan.model.follower import ModelFollowingModel
 
@@ -174,7 +173,7 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
     if entity is None:
         raise NotFound
 
-    _check_access('resource_delete',context, data_dict)
+    _check_access('resource_delete', context, data_dict)
 
     package_id = entity.get_package_id()
 
@@ -183,6 +182,17 @@ def resource_delete(context: Context, data_dict: DataDict) -> ActionResult.Resou
     for plugin in plugins.PluginImplementations(plugins.IResourceController):
         plugin.before_resource_delete(context, data_dict,
                                       pkg_dict.get('resources', []))
+
+    # Delete file if it was uploaded
+    if entity.url_type == 'upload':
+        upload = uploader.get_resource_uploader(data_dict)
+        # Don't break if old plugin/interface is found
+        if hasattr(upload, "delete"):
+            upload.delete(id)
+        else:
+            log.warning(
+                "%s does not have delete function, could not cleanup: %s",
+                type(upload).__name__, id)
 
     package_show_context: Union[Context, Any] = dict(context, for_update=True)
     pkg_dict = _get_action('package_show')(
@@ -279,6 +289,7 @@ def package_relationship_delete(context: Context, data_dict: DataDict) -> Action
 
     relationship.delete()
     model.repo.commit()
+
 
 def member_delete(context: Context, data_dict: DataDict) -> ActionResult.MemberDelete:
     '''Remove an object (e.g. a user, dataset or group) from a group.
@@ -458,6 +469,7 @@ def organization_delete(context: Context, data_dict: DataDict) -> ActionResult.O
     '''
     return _group_or_org_delete(context, data_dict, is_org=True)
 
+
 def _group_or_org_purge(
         context: Context, data_dict: DataDict, is_org: bool = False):
     '''Purge a group or organization.
@@ -528,6 +540,7 @@ def _group_or_org_purge(
     group.purge()
     model.repo.commit_and_remove()
 
+
 def group_purge(context: Context, data_dict: DataDict) -> None:
     '''Purge a group.
 
@@ -546,6 +559,7 @@ def group_purge(context: Context, data_dict: DataDict) -> None:
 
     '''
     return _group_or_org_purge(context, data_dict, is_org=False)
+
 
 def organization_purge(context: Context, data_dict: DataDict) -> None:
     '''Purge an organization.
@@ -567,6 +581,7 @@ def organization_purge(context: Context, data_dict: DataDict) -> None:
 
     '''
     return _group_or_org_purge(context, data_dict, is_org=True)
+
 
 def task_status_delete(context: Context, data_dict: DataDict) -> None:
     '''Delete a task status.

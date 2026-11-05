@@ -179,10 +179,16 @@ def download(package_type: str,
         if hasattr(upload, 'download'):
             try:
                 resp = upload.download(resource_id, filename)
+            except NotImplementedError:
+                # fall back to FileKeeper
+                resp = None
             except (IOError, OSError, files.exc.LocationError):
                 # includes FileNotFoundError
                 return base.abort(404, _('No download is available'))
         else:
+            resp = None
+
+        if not resp:
             filepath = upload.get_path(rsc[u'id'])
             mimetype = rsc.get('mimetype')
 

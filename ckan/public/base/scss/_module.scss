@@ -19,6 +19,15 @@
     background-color: $moduleHeadingBackgroundColor;
     border-top: 1px solid $moduleHeadingBorderColor;
     border-bottom: 1px solid $moduleHeadingBorderColor;
+    display: flex;
+    align-items: center;
+    column-gap: 5px;
+    nav.sort-content {
+        margin-inline-start: auto;
+        .selected {
+            font-weight: 600;
+        }
+    }
 }
 
 .module-content {

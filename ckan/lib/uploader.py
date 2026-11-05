@@ -614,61 +614,16 @@ class FKUpload(object):
                 ))
 
     def delete(self, filename: Optional[str] = None) -> None:
-        ''' Delete file we are pointing at'''
-        if self.filename and self.storage:
-            try:
-                self.storage.remove(files.FileData(files.Location(self.filename)))
-            except Exception as e:
-                log.warning("Unable to delete stored file: {}", e)
-                pass
+        raise NotImplementedError()
 
     def download(self, filename: Optional[str] = None
                  ) -> Union[Response, WerkzeugResponse]:
-        if not self.filename:
-            raise logic.NotFound("Missing filename")
-        if not self.storage:
-            raise logic.NotFound("Storage not enabled, unable to download")
-
-        file_location = files.Location(self.filename)
-        if isinstance(self.storage, files.Storage):
-            storage_wrapper: files.Storage = self.storage
-        else:
-            filepath = self.storage.full_path(file_location)
-            resp = flask.send_file(filepath)
-            _add_download_headers(
-                filepath, self.storage.content_type(file_location), resp)
-            return resp
-
-        content_type = mimetypes.guess_type(self.filename)[0] \
-            or storage_wrapper.content_type(file_location)
-        return storage_wrapper.as_response(
-            files.FileData(
-                file_location,
-                size=storage_wrapper.size(file_location),
-                content_type=content_type,
-                hash=storage_wrapper.hash(file_location),
-            )
-        )
+        raise NotImplementedError()
 
     def metadata(self,
                  filename: Optional[str] = None
                  ) -> Union[dict[str, Any], IOError]:
-        ''' Return meta details of file'''
-        filename = filename or self.filename
-        if not filename:
-            raise logic.NotFound("Missing filename")
-        if not self.storage:
-            raise logic.NotFound("Storage not enabled, unable to download")
-        try:
-            location = files.Location(filename)
-            return {
-                'content_type': self.storage.content_type(location),
-                'size': self.storage.size(location),
-                'hash': self.storage.hash(location)
-            }
-        except IOError as e:
-            log.error("Could not retrieve metadata, IOError thrown: %s", e)
-            raise
+        raise NotImplementedError()
 
     def verify_type(self):
 
@@ -809,30 +764,7 @@ class FKResourceUpload(object):
 
     def download(self, id: str, filename: Optional[str] = None
                  ) -> Union[Response, WerkzeugResponse]:
-        if not self.storage:
-            raise logic.NotFound("Storage not enabled, unable to download")
-        file_location = self._get_location(id)
-        if isinstance(self.storage, files.Storage):
-            storage_wrapper: files.Storage = self.storage
-        else:
-            filepath = self.storage.full_path(file_location)
-            resp = flask.send_file(filepath)
-            _add_download_headers(filepath, self.mimetype, resp)
-            return resp
-
-        resource = logic.get_action('resource_show')(
-            {'ignore_auth': True}, {'id': id})
-        content_type = resource.get('mimetype') \
-            or mimetypes.guess_type(self._get_resource_path(id))[0] \
-            or storage_wrapper.content_type(file_location)
-        return storage_wrapper.as_response(
-            files.FileData(
-                file_location,
-                size=storage_wrapper.size(file_location),
-                content_type=content_type,
-                hash=storage_wrapper.hash(file_location),
-            )
-        )
+        raise NotImplementedError()
 
     def metadata(self,
                  id: str,

@@ -754,7 +754,13 @@ class FKResourceUpload(object):
                 self.storage.remove(files.FileData(location))
 
     def delete(self, id: str, filename: Optional[str] = None) -> None:
-        raise NotImplementedError()
+        ''' Delete file we are pointing at'''
+        if self.storage:
+            try:
+                self.storage.remove(files.FileData(self._get_location(id)))
+            except Exception as e:
+                log.warning("Unable to delete stored file for resource {}: {}", id, e)
+                pass
 
     def download(self, id: str, filename: Optional[str] = None
                  ) -> Union[Response, WerkzeugResponse]:
@@ -764,4 +770,16 @@ class FKResourceUpload(object):
                  id: str,
                  filename: Optional[str] = None
                  ) -> Union[dict[str, Any], IOError]:
-        raise NotImplementedError()
+        ''' Return meta details of file'''
+        if not self.storage:
+            raise logic.NotFound("Storage not enabled, unable to download")
+        try:
+            location = self._get_location(id)
+            return {
+                'content_type': self.storage.content_type(location),
+                'size': self.storage.size(location),
+                'hash': self.storage.hash(location)
+            }
+        except IOError as e:
+            log.error("Could not retrieve metadata, IOError thrown: %s", e)
+            raise

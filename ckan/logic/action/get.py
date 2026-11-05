@@ -1191,6 +1191,9 @@ def resource_file_metadata_show(
     upload = uploader.get_resource_uploader(resource_dict)
     try:
         return upload.metadata(id, resource_dict.get('url'))
+    except NotImplementedError:
+        log.error("Uploader does not support retrieving metadata")
+        raise NotFound
     except (IOError, AttributeError):
         raise NotFound
 

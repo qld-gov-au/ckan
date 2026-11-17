@@ -660,8 +660,9 @@ class Page(BasePage):
         if mode:
             anchor.children = []
             anchor['class'] = ''
-            extra_attributes['class'] = extra_attributes.get('class', '') \
-                + ' d-flex align-items-center'
+            extra_attributes['class'] = (
+                extra_attributes.get('class', '') + ' d-flex align-items-center'
+            ).strip()
             if mode == 'Previous':
                 anchor.add(tags.i(cls='fa fa-arrow-left'))
             anchor.add(tags.span(' ' + text + ' '))

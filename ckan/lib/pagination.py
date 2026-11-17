@@ -679,7 +679,7 @@ class Page(BasePage):
         # Convert ..
         dotdot = u'<span class="pager_dotdot">..</span>'
         dotdot_link = tags.li(
-            tags.span(tags.i(cls="fa-solid fa-ellipsis")),
+            tags.span(cls="fa fa-ellipsis-h"),
             cls=u"disabled d-flex align-items-center"
         )
         html = re.sub(dotdot, str(dotdot_link), html)

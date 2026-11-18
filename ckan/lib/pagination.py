@@ -39,7 +39,7 @@ import re
 from string import Template
 from typing import Any, Callable, Match, Optional, Sequence, List, cast
 
-import dominate.tags as tags
+from dominate import svg, tags
 from markupsafe import Markup
 
 
@@ -668,8 +668,22 @@ class Page(BasePage):
         # Convert ..
         dotdot = u'<span class="pager_dotdot">..</span>'
         dotdot_link = tags.li(
-            tags.span(cls="fa fa-ellipsis-h"),
-            cls=u"disabled d-flex align-items-center"
+            svg.svg(
+                svg.path(
+                    fill="currentColor",
+                    d="M352 256C352 238.3 366.3 224 384 224C401.7 224 416 238.3 416 256C416 273.7 401.7 288 384 288C366.3 288 352 273.7 352 256z"
+                      "M192 256C192 238.3 206.3 224 224 224C241.7 224 256 238.3 256 256C256 273.7 241.7 288 224 288C206.3 288 192 273.7 192 256z"
+                      "M96 256C96 273.7 81.67 288 64 288C46.33 288 32 273.7 32 256C32 238.3 46.33 224 64 224C81.67 224 96 238.3 96 256z"
+                ),
+                xmlns="http://www.w3.org/2000/svg",
+                viewBox="0 0 448 512",
+                aria_hidden="true",
+                focusable="false",
+                width="24",
+                height="32",
+                role="img"
+            ),
+            cls="ellipsis"
         )
         html = re.sub(dotdot, str(dotdot_link), html)
 

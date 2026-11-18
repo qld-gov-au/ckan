@@ -655,19 +655,8 @@ class Page(BasePage):
             extra_attributes: Optional[dict[str, Any]] = None):
         anchor = super(Page, self)._pagerlink(page, text)
         extra_attributes = extra_attributes or {"class": "page-item"}
-        # reformat to drop borders and add arrows if applicable
-        mode = text if text in ['Previous', 'Next'] else None
-        if mode:
-            anchor.children = []
-            anchor['class'] = ''
-            extra_attributes['class'] = (
-                extra_attributes.get('class', '') + ' d-flex align-items-center'
-            ).strip()
-            if mode == 'Previous':
-                anchor.add(tags.i(cls='fa fa-arrow-left'))
-            anchor.add(tags.span(' ' + text + ' '))
-            if mode == 'Next':
-                anchor.add(tags.i(cls='fa fa-arrow-right'))
+        if text in ['Previous', 'Next']:
+            extra_attributes['class'] = extra_attributes.get('class', '') + ' ' + text.lower()
         return str(tags.li(anchor, **extra_attributes))
 
     # Change 'current page' link from <span> to <li><a>

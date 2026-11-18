@@ -60,9 +60,7 @@
 }
 
 .main .secondary {
-    padding: 0;
     z-index: 1;
-    padding-right: 1px;
 }
 
 
@@ -103,6 +101,7 @@
         -moz-box-ordinal-group: 2;
         -webkit-order: 2;
         order: 2;
+        padding: 1rem;
     }
     .js .main .secondary .filters {
         display: none;
